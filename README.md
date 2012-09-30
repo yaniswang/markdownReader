@@ -1,7 +1,7 @@
-MarkdownReader
+markdownReader
 ==============
 
-Markdown Reader is a extention for chrome, used for reading markdown file.
+markdownReader is a extention for chrome, used for reading markdown file.
 
 Features:
 ==============
@@ -14,7 +14,7 @@ Features:
 License
 ================
 
-hostsPlus is released under the MIT license:
+markdownReader is released under the MIT license:
 
 > The MIT License
 > 
