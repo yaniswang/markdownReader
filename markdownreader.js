@@ -29,7 +29,7 @@
 	}
 
 	function updateOutline() {
-		var arrAllHeader = document.querySelectorAll("h1,h2,h3,h4,h6,h6");
+		var arrAllHeader = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
 		var arrOutline = ['<ul>'];
 		var header, headerText;
 		var level = 0,
