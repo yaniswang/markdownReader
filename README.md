@@ -42,4 +42,5 @@ Thanks
 ================
 
 * showdown.js: [https://github.com/coreyti/showdown](https://github.com/coreyti/showdown)
+* prettify: [http://code.google.com/p/google-code-prettify/](http://code.google.com/p/google-code-prettify/)
 * GitHub: [https://github.com/](https://github.com/)
