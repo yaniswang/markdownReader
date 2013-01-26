@@ -32,6 +32,7 @@
 		var arrAllHeader = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
 		var arrOutline = ['<ul>'];
 		var header, headerText;
+		var id = 0;
 		var level = 0,
 			lastLevel = 1;
 		var levelCount = 0;
@@ -39,7 +40,7 @@
 			header = arrAllHeader[i];
 			headerText = header.innerText;
 
-			header.setAttribute('id', headerText);
+			header.setAttribute('id', id);
 
 			level = header.tagName.match(/^h(\d)$/i)[1];
 			levelCount = level - lastLevel;
@@ -55,9 +56,10 @@
 				}
 			};
 			arrOutline.push('<li>');
-			arrOutline.push('<a href="#' + headerText + '">' + headerText + '</a>');
+			arrOutline.push('<a href="#' + id + '">' + headerText + '</a>');
 			arrOutline.push('</li>');
 			lastLevel = level;
+			id++;
 		}
 		arrOutline.push('</ul>')
 		var outline = document.getElementById('markdown-outline');
