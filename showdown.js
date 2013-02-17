@@ -64,7 +64,28 @@
 //
 // Showdown namespace
 //
-var Showdown = {};
+var Showdown = { extensions: {} };
+
+//
+// forEach
+//
+var forEach = Showdown.forEach = function(obj, callback) {
+	if (typeof obj.forEach === 'function') {
+		obj.forEach(callback);
+	} else {
+		var i, len = obj.length;
+		for (i = 0; i < len; i++) {
+			callback(obj[i], i, obj);
+		}
+	}
+};
+
+//
+// Standard extension naming
+//
+var stdExtName = function(s) {
+	return s.replace(/[_-]||\s/g, '').toLowerCase();
+};
 
 //
 // converter
@@ -72,7 +93,7 @@ var Showdown = {};
 // Wraps all "globals" so that the only thing
 // exposed is makeHtml().
 //
-Showdown.converter = function() {
+Showdown.converter = function(converter_options) {
 
 //
 // Globals:
@@ -87,6 +108,32 @@ var g_html_blocks;
 // (see _ProcessListItems() for details):
 var g_list_level = 0;
 
+// Global extensions
+var g_lang_extensions = [];
+var g_output_modifiers = [];
+
+
+//
+// Automatic Extension Loading (node only):
+//
+
+if (typeof module !== 'undefind' && typeof exports !== 'undefined' && typeof require !== 'undefind') {
+	var fs = require('fs');
+
+	if (fs) {
+		// Search extensions folder
+		var extensions = fs.readdirSync((__dirname || '.')+'/extensions').filter(function(file){
+			return ~file.indexOf('.js');
+		}).map(function(file){
+			return file.replace(/\.js$/, '');
+		});
+		// Load extensions into Showdown namespace
+		Showdown.forEach(extensions, function(ext){
+			var name = stdExtName(ext);
+			Showdown.extensions[name] = require('./extensions/' + ext);
+		});
+	}
+}
 
 this.makeHtml = function(text) {
 //
@@ -100,14 +147,14 @@ this.makeHtml = function(text) {
 	// from other articles when generating a page which contains more than
 	// one article (e.g. an index page that shows the N most recent
 	// articles):
-	g_urls = new Array();
-	g_titles = new Array();
-	g_html_blocks = new Array();
+	g_urls = {};
+	g_titles = {};
+	g_html_blocks = [];
 
 	// attacklab: Replace ~ with ~T
 	// This lets us use tilde as an escape char to avoid md5 hashes
 	// The choice of character is arbitray; anything that isn't
-    // magic in Markdown will work.
+	// magic in Markdown will work.
 	text = text.replace(/~/g,"~T");
 
 	// attacklab: Replace $ with ~D
@@ -131,6 +178,11 @@ this.makeHtml = function(text) {
 	// contorted like /[ \t]*\n+/ .
 	text = text.replace(/^[ \t]+$/mg,"");
 
+	// Run language extensions
+	Showdown.forEach(g_lang_extensions, function(x){
+		text = _ExecuteExtension(x, text);
+	});
+
 	// Handle github codeblocks prior to running HashHTML so that
 	// HTML contained within the codeblock gets escaped propertly
 	text = _DoGithubCodeBlocks(text);
@@ -151,9 +203,60 @@ this.makeHtml = function(text) {
 	// attacklab: Restore tildes
 	text = text.replace(/~T/g,"~");
 
+	// Run output modifiers
+	Showdown.forEach(g_output_modifiers, function(x){
+		text = _ExecuteExtension(x, text);
+	});
+
 	return text;
 };
+//
+// Options:
+//
 
+// Parse extensions options into separate arrays
+if (converter_options && converter_options.extensions) {
+
+  var self = this;
+
+	// Iterate over each plugin
+	Showdown.forEach(converter_options.extensions, function(plugin){
+
+		// Assume it's a bundled plugin if a string is given
+		if (typeof plugin === 'string') {
+			plugin = Showdown.extensions[stdExtName(plugin)];
+		}
+
+		if (typeof plugin === 'function') {
+			// Iterate over each extension within that plugin
+			Showdown.forEach(plugin(self), function(ext){
+				// Sort extensions by type
+				if (ext.type) {
+					if (ext.type === 'language' || ext.type === 'lang') {
+						g_lang_extensions.push(ext);
+					} else if (ext.type === 'output' || ext.type === 'html') {
+						g_output_modifiers.push(ext);
+					}
+				} else {
+					// Assume language extension
+					g_output_modifiers.push(ext);
+				}
+			});
+		} else {
+			throw "Extension '" + plugin + "' could not be loaded.  It was either not found or is not a valid extension.";
+		}
+	});
+}
+
+
+var _ExecuteExtension = function(ext, text) {
+	if (ext.regex) {
+		var re = new RegExp(ext.regex, 'g');
+		return text.replace(re, ext.replace);
+	} else if (ext.filter) {
+		return ext.filter(text);
+	}
+};
 
 var _StripLinkDefinitions = function(text) {
 //
@@ -184,7 +287,11 @@ var _StripLinkDefinitions = function(text) {
 			  /gm,
 			  function(){...});
 	*/
-	var text = text.replace(/^[ ]{0,3}\[(.+)\]:[ \t]*\n?[ \t]*<?(\S+?)>?[ \t]*\n?[ \t]*(?:(\n*)["(](.+?)[")][ \t]*)?(?:\n+|\Z)/gm,
+
+	// attacklab: sentinel workarounds for lack of \A and \Z, safari\khtml bug
+	text += "~0";
+
+	text = text.replace(/^[ ]{0,3}\[(.+)\]:[ \t]*\n?[ \t]*<?(\S+?)>?[ \t]*\n?[ \t]*(?:(\n*)["(](.+?)[")][ \t]*)?(?:\n+|(?=~0))/gm,
 		function (wholeMatch,m1,m2,m3,m4) {
 			m1 = m1.toLowerCase();
 			g_urls[m1] = _EncodeAmpsAndAngles(m2);  // Link IDs are case-insensitive
@@ -200,6 +307,9 @@ var _StripLinkDefinitions = function(text) {
 			return "";
 		}
 	);
+
+	// attacklab: strip sentinel
+	text = text.replace(/~0/,"");
 
 	return text;
 }
@@ -259,13 +369,13 @@ var _HashHTMLBlocks = function(text) {
 			\b					// word break
 								// attacklab: hack around khtml/pcre bug...
 			[^\r]*?				// any number of lines, minimally matching
-			.*</\2>				// the matching end tag
+			</\2>				// the matching end tag
 			[ \t]*				// trailing spaces/tabs
 			(?=\n+)				// followed by a newline
 		)						// attacklab: there are sentinel newlines at end of document
 		/gm,function(){...}};
 	*/
-	text = text.replace(/^(<(p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|style|section|header|footer|nav|article|aside)\b[^\r]*?.*<\/\2>[ \t]*(?=\n+)\n)/gm,hashElement);
+	text = text.replace(/^(<(p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|style|section|header|footer|nav|article|aside)\b[^\r]*?<\/\2>[ \t]*(?=\n+)\n)/gm,hashElement);
 
 	// Special case just for <hr />. It was easier to make a special case than
 	// to make the other regex more complicated.
@@ -483,7 +593,7 @@ var _DoAnchors = function(text) {
 		)
 		/g,writeAnchorTag);
 	*/
-	text = text.replace(/(\[((?:\[[^\]]*\]|[^\[\]])*)\]\([ \t]*()<?(.*?)>?[ \t]*((['"])(.*?)\6[ \t]*)?\))/g,writeAnchorTag);
+	text = text.replace(/(\[((?:\[[^\]]*\]|[^\[\]])*)\]\([ \t]*()<?(.*?(?:\(.*?\).*?)?)>?[ \t]*((['"])(.*?)\6[ \t]*)?\))/g,writeAnchorTag);
 
 	//
 	// Last, handle reference-style shortcuts: [link text]
@@ -881,7 +991,7 @@ var _DoCodeBlocks = function(text) {
 			codeblock = codeblock.replace(/^\n+/g,""); // trim leading newlines
 			codeblock = codeblock.replace(/\n+$/g,""); // trim trailing whitespace
 
-			codeblock = '<pre class="prettyprint linenums">' + codeblock + '\n</pre>';
+			codeblock = '<pre class="prettyprint linenums"><code>' + codeblock + "\n</code></pre>";
 
 			return hashBlock(codeblock) + nextChar;
 		}
@@ -1089,7 +1199,7 @@ var _FormParagraphs = function(text) {
 	text = text.replace(/\n+$/g,"");
 
 	var grafs = text.split(/\n{2,}/g);
-	var grafsOut = new Array();
+	var grafsOut = [];
 
 	//
 	// Wrap <p> tags.
@@ -1208,16 +1318,9 @@ var _EncodeEmailAddress = function(addr) {
 //  mailing list: <http://tinyurl.com/yu7ue>
 //
 
-	// attacklab: why can't javascript speak hex?
-	function char2hex(ch) {
-		var hexDigits = '0123456789ABCDEF';
-		var dec = ch.charCodeAt(0);
-		return(hexDigits.charAt(dec>>4) + hexDigits.charAt(dec&15));
-	}
-
 	var encode = [
 		function(ch){return "&#"+ch.charCodeAt(0)+";";},
-		function(ch){return "&#x"+char2hex(ch)+";";},
+		function(ch){return "&#x"+ch.charCodeAt(0).toString(16)+";";},
 		function(ch){return ch;}
 	];
 
@@ -1337,5 +1440,15 @@ var escapeCharacters_callback = function(wholeMatch,m1) {
 
 } // end of Showdown.converter
 
+
 // export
 if (typeof module !== 'undefined') module.exports = Showdown;
+
+// stolen from AMD branch of underscore
+// AMD define happens at the end for compatibility with AMD loaders
+// that don't enforce next-turn semantics on modules.
+if (typeof define === 'function' && define.amd) {
+    define('showdown', function() {
+        return Showdown;
+    });
+}

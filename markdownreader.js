@@ -21,7 +21,7 @@
 	function updateMarkdown(text) {
 		if (text !== lastText) {
 			lastText = text;
-			markdownConverter.makeHtml(lastText)
+			markdownConverter.makeHtml(lastText);
 			document.getElementById('markdown-container').innerHTML = markdownConverter.makeHtml(lastText);
 			prettyPrint();
 			updateOutline();
