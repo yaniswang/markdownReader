@@ -11,6 +11,13 @@ Features:
 3. Highlight the code area
 4. Show outline beside the content
 
+Install
+==============
+
+1. Install plugin: [https://chrome.google.com/webstore/detail/markdown-reader/gpoigdifkoadgajcincpilkjmejcaanc](https://chrome.google.com/webstore/detail/markdown-reader/gpoigdifkoadgajcincpilkjmejcaanc)
+2. Open plugin center: [chrome://extensions/](chrome://extensions/), and enable file url for markdownReader
+3. Drag md file to chrome
+
 License
 ================
 
@@ -18,7 +25,7 @@ markdownReader is released under the MIT license:
 
 > The MIT License
 >
-> Copyright (c) 2012 alibaba.com
+> Copyright (c) 2012 Yanis Wang \< yanis.wang@gmail.com \>
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
