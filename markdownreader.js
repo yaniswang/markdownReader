@@ -21,7 +21,6 @@
 	function updateMarkdown(text) {
 		if (text !== lastText) {
 			lastText = text;
-			// markdownConverter.makeHtml(lastText); // coding twice
 			document.getElementById('markdown-container').innerHTML = markdownConverter.makeHtml(lastText);
 			prettyPrint();
 			updateOutline();
@@ -74,8 +73,7 @@
 		var outline = document.getElementById('markdown-outline');
 		var markdownContainer = document.getElementById('markdown-container');
 		outline.style.left = markdownContainer.offsetLeft + markdownContainer.offsetWidth + 10 + 'px';
-		outline.style.overflowY = "auto";
-		outline.style.maxHeight = document.body.clientHeight;
+		outline.style.maxHeight = document.body.clientHeight - 30;
 		outline.style.display = 'block';
 	}
 

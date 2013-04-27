@@ -54,6 +54,7 @@ dd{margin-left:2em;margin-bottom:1em;}
 	box-shadow:5px 5px 2px #ccc;
 	padding: 5px 10px;
 	background-color: #fff;
+	overflow-y: auto;
 }
 #markdown-outline ul{
 	margin:5px 0 5px 0;
@@ -76,7 +77,7 @@ dd{margin-left:2em;margin-bottom:1em;}
 	padding:5px;
 	width:50px;
 	height:20px;
-	background:url(images/backtop.gif) no-repeat 5px 5px;
+	background:url(images/backtop.gif) no-repeat 5px 5px #fff;
 	border:1px solid #ccc;
 	cursor:pointer;
 }
