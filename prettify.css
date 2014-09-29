@@ -65,3 +65,12 @@ pre code {
   padding: 0;
   background-color: transparent;
 }
+
+/* Override .linenums when printing to avoid dark background */
+@media print {
+  .prettyprint.linenums {
+    -webkit-box-shadow: none;
+        -moz-box-shadow: none;
+            box-shadow: none; 
+  }
+}
