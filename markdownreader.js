@@ -15,7 +15,7 @@
 	document.body.innerHTML = '<div id="markdown-container"></div><div id="markdown-outline"></div><div id="markdown-backTop" onclick="window.scrollTo(0,0);"></div>';
 	window.onresize = showOutline;
 
-	var markdownConverter = new Showdown.converter();
+	var markdownConverter = new Showdown.converter({ extensions: ['table'] });
 	var lastText = null;
 
 	function updateMarkdown(text) {

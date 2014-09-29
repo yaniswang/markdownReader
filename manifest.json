@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Markdown Reader",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Read markdown file in Chrome.",
 	"icons": {
 		"128": "images/icon.png",
@@ -10,7 +10,7 @@
 	},
 	"permissions": ["tabs", "\u003Call_urls\u003E"],
 	"content_scripts": [{
-		"js": ["prettify.js", "showdown.js", "markdownreader.js"],
+		"js": ["prettify.js", "showdown.js", "table.js", "markdownreader.js"],
 		"matches": ["*://*/*.md", "file://*/*.md", "*://*/*.markdown", "file://*/*.markdown", "*://*/*.mdown", "file://*/*.mdown", "*://*/*.mkdn", "file://*/*.mkdn", "*://*/*.mkd", "file://*/*.mkd", "*://*/*.text", "file://*/*.text", "*://*/*.mdtext", "file://*/*.mdtext", "*://*/*.mdtxt", "file://*/*.mdtxt"],
 		"run_at": "document_end"
 	}],

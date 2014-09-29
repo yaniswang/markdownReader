@@ -10,17 +10,15 @@
     font:13.34px helvetica,arial,freesans,clean,sans-serif;
     color:black;
 }
+#markdown-container table{
+	font:13.34px helvetica,arial,freesans,clean,sans-serif;
+	color:black;
+}
 p {
     margin:1em 0;
     line-height:1.5em;
 }
-table {
-    font-size:inherit;
-    font:100%;
-    margin:1em;
-}
-table th{border-bottom:1px solid #bbb;padding:.2em 1em;}
-table td{border-bottom:1px solid #ddd;padding:.2em 1em;}
+
 input[type=text],input[type=password],input[type=image],textarea{font:99% helvetica,arial,freesans,sans-serif;}
 select,option{padding:0 .25em;}
 optgroup{margin-top:.5em;}
@@ -80,4 +78,25 @@ dd{margin-left:2em;margin-bottom:1em;}
 	background:url(images/backtop.gif) no-repeat 5px 5px #fff;
 	border:1px solid #ccc;
 	cursor:pointer;
+}
+
+/*table style*/
+
+table {
+    border-collapse:collapse !important;
+}
+table th, table td{
+	border:1px solid #ddd !important;
+	padding: 5px;
+	line-height: 1.5;
+	vertical-align: top;
+	border-top: 1px solid #dddddd;
+
+}
+table th{
+	background: #EEE;
+}
+table p{
+	margin: 0;
+
 }
