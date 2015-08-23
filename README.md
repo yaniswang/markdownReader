@@ -32,12 +32,11 @@ Tasklist:
 Table:
 ---------------
 
-| h1    |    h2   |      h3 |
-|:------|:-------:|--------:|
-| 100   | *foo*     | 1     |
-| 200 | **bar** | 2 |
-| 300 | ~~baz~~ | 3 |
-| 400 | zzz | 4 |
+| Left-Aligned  | Center Aligned  | Right Aligned |
+| :------------ |:---------------:| -----:|
+| col 3 is      | some wordy text | $1600 |
+| col 2 is      | centered        |   $12 |
+| zebra stripes | are neat        |    $1 |
 
 LaTeX:
 ---------------
