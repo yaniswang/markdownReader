@@ -10,7 +10,8 @@ Features:
 2. Auto reload local file when file is changed
 3. Highlight the code area
 4. Show outline beside the content
-5. Support table extension
+5. Support extension: Tasklist, table, LaTeX
+6. Toggle raw mode and markdown mode by double Click
 
 Install
 ==============
@@ -19,6 +20,36 @@ Install
 2. Open plugin center: [chrome://extensions/](chrome://extensions/), and enable file url for markdownReader
 3. Drag md file to chrome
 
+Demo
+=============
+
+Tasklist:
+---------------
+
+- [x] This task is done
+- [ ] This is still pending
+
+Table:
+---------------
+
+| h1    |    h2   |      h3 |
+|:------|:-------:|--------:|
+| 100   | *foo*     | 1     |
+| 200 | **bar** | 2 |
+| 300 | ~~baz~~ | 3 |
+| 400 | zzz | 4 |
+
+LaTeX:
+---------------
+
+Inline LaTeX: $E=mc^2$
+
+Block LaTeX:
+
+$$
+E=mc^2
+$$
+
 License
 ================
 
@@ -26,7 +57,7 @@ markdownReader is released under the MIT license:
 
 > The MIT License
 >
-> Copyright (c) 2014 Yanis Wang \< yanis.wang@gmail.com \>
+> Copyright (c) 2014-2015 Yanis Wang \< yanis.wang@gmail.com \>
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +80,7 @@ markdownReader is released under the MIT license:
 Thanks
 ================
 
-* showdown.js: [https://github.com/coreyti/showdown](https://github.com/coreyti/showdown)
+* showdown.js: [https://github.com/showdownjs/showdown](https://github.com/showdownjs/showdown)
+* Katex: [https://github.com/Khan/KaTeX](https://github.com/Khan/KaTeX)
 * prettify: [http://code.google.com/p/google-code-prettify/](http://code.google.com/p/google-code-prettify/)
 * GitHub: [https://github.com/](https://github.com/)

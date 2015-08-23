@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Markdown Reader",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"description": "Read markdown file in Chrome.",
 	"icons": {
 		"128": "images/icon.png",
@@ -10,13 +10,36 @@
 	},
 	"permissions": ["tabs", "\u003Call_urls\u003E"],
 	"content_scripts": [{
-		"js": ["prettify.js", "showdown.js", "table.js", "markdownreader.js"],
+		"js": ["jquery-1.8.3.min.js", "prettify.js", "katex.min.js", "showdown.js", "showdown-katex.js", "markdownreader.js"],
 		"matches": ["*://*/*.md", "file://*/*.md", "*://*/*.markdown", "file://*/*.markdown", "*://*/*.mdown", "file://*/*.mdown", "*://*/*.mkdn", "file://*/*.mkdn", "*://*/*.mkd", "file://*/*.mkd", "*://*/*.text", "file://*/*.text", "*://*/*.mdtext", "file://*/*.mdtext", "*://*/*.mdtxt", "file://*/*.mdtxt"],
 		"run_at": "document_end"
 	}],
 	"web_accessible_resources": [
 		"markdownreader.css",
 		"prettify.css",
-		"images/backtop.gif"
+		"images/backtop.gif",
+		"katex.min.css",
+		"fonts/KaTeX_AMS-Regular.woff",
+		"fonts/KaTeX_AMS-Regular.woff2",
+		"fonts/KaTeX_Main-Bold.woff",
+		"fonts/KaTeX_Main-Bold.woff2",
+		"fonts/KaTeX_Main-Italic.woff",
+		"fonts/KaTeX_Main-Italic.woff2",
+		"fonts/KaTeX_Main-Regular.woff",
+		"fonts/KaTeX_Main-Regular.woff2",
+		"fonts/KaTeX_Math-BoldItalic.woff",
+		"fonts/KaTeX_Math-BoldItalic.woff2",
+		"fonts/KaTeX_Math-Italic.woff",
+		"fonts/KaTeX_Math-Italic.woff2",
+		"fonts/KaTeX_Math-Regular.woff",
+		"fonts/KaTeX_Math-Regular.woff2",
+		"fonts/KaTeX_Size1-Regular.woff",
+		"fonts/KaTeX_Size1-Regular.woff2",
+		"fonts/KaTeX_Size2-Regular.woff",
+		"fonts/KaTeX_Size2-Regular.woff2",
+		"fonts/KaTeX_Size3-Regular.woff",
+		"fonts/KaTeX_Size3-Regular.woff2",
+		"fonts/KaTeX_Size4-Regular.woff",
+		"fonts/KaTeX_Size4-Regular.woff2"
 	]
 }

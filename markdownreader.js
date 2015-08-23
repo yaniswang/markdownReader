@@ -1,7 +1,10 @@
 (function(document) {
-
+	
 	//忽略HTML代码
 	if (document.doctype) return;
+
+    document.write('<!DOCTYPE html><html><head><body><div id="container" class="viewport-flip"><div id="text-container" class="content flip" style="display:none;"></div><div id="markdown-container" class="content flip"></div></div><div id="markdown-outline"></div><div id="markdown-backTop" onclick="window.scrollTo(0,0);"></div></body></html>');
+    document.close();
 
 	var link = document.createElement('link');
 	link.rel = 'stylesheet';
@@ -12,16 +15,65 @@
 	link.rel = 'stylesheet';
 	link.href = chrome.extension.getURL('prettify.css');
 	document.head.appendChild(link);
-	document.body.innerHTML = '<div id="markdown-container"></div><div id="markdown-outline"></div><div id="markdown-backTop" onclick="window.scrollTo(0,0);"></div>';
+
+	link = document.createElement('link');
+	link.rel = 'stylesheet';
+	link.href = chrome.extension.getURL('katex.min.css');
+	document.head.appendChild(link);
+
 	window.onresize = showOutline;
 
-	var markdownConverter = new Showdown.converter({ extensions: ['table'] });
+	var jTextContainer = $('#text-container');
+	var jMarkdownContainer = $('#markdown-container');
+	var jOutline = $('#markdown-outline');
+
+	var isMarkdownMode = true;
+	$(document.body).on('dblclick',toggleMode);
+
+	function toggleMode(){
+		if(isMarkdownMode){
+			console.log('显示text')
+			jMarkdownContainer.addClass('out').removeClass('in');
+			jMarkdownContainer.one('webkitAnimationEnd', function(){
+				jTextContainer.show().addClass('in').removeClass('out');
+				jMarkdownContainer.hide();
+				isMarkdownMode = false;
+			});
+		}
+		else{
+			console.log('显示mark')
+			jTextContainer.addClass('out').removeClass('in');
+			jTextContainer.one('webkitAnimationEnd', function(){
+				jMarkdownContainer.show().addClass('in').removeClass('out');
+				jTextContainer.hide();
+				isMarkdownMode = true;
+			});
+		}
+	}
+
+	jMarkdownContainer.on('webkitAnimationEnd', function(){
+		if(isMarkdownMode){
+			showOutline();
+		}
+		else{
+			hideOutline();
+		}
+	});
+
+	var markdownConverter = new showdown.Converter({
+		tables: true,
+		strikethrough: true,
+		simplifiedAutoLink: true,
+		tasklists: true, 
+		extensions: ['katex'] 
+	});
 	var lastText = null;
 
 	function updateMarkdown(text) {
 		if (text !== lastText) {
 			lastText = text;
-			document.getElementById('markdown-container').innerHTML = markdownConverter.makeHtml(lastText);
+			jTextContainer.text(text);
+			jMarkdownContainer.html(markdownConverter.makeHtml(lastText));
 			prettyPrint();
 			updateOutline();
 		}
@@ -61,20 +113,31 @@
 			id++;
 		}
 		arrOutline.push('</ul>')
-		var outline = document.getElementById('markdown-outline');
 		if(arrOutline.length > 2){
-			outline.innerHTML = arrOutline.join('');
+			jOutline.html(arrOutline.join(''));
+            jOutline.find('ul').each(function(i,n){
+                var jThis = $(this);
+                if(jThis.children('li').length === 0){
+                    jThis.replaceWith(jThis.children());
+                }
+            });
 			showOutline();
 		}
-		else outline.style.display = 'none'; 
+		else{
+			hideOutline();
+		}
 	}
 
 	function showOutline() {
-		var outline = document.getElementById('markdown-outline');
-		var markdownContainer = document.getElementById('markdown-container');
-		outline.style.left = markdownContainer.offsetLeft + markdownContainer.offsetWidth + 10 + 'px';
-		outline.style.maxHeight = document.body.clientHeight - 30;
-		outline.style.display = 'block';
+		var offset = jMarkdownContainer.offset();
+		jOutline.css({
+			left: offset.left + jMarkdownContainer.outerWidth() + 10 + 'px',
+			maxHeight: document.body.clientHeight - 30
+		}).show();
+	}
+
+	function hideOutline(){
+		jOutline.hide();
 	}
 
 	var xmlhttp = new XMLHttpRequest();

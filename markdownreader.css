@@ -1,7 +1,80 @@
-*{margin:0;padding:0;}
-#markdown-container{
+*{
+	margin:0;
+	padding:0;
+}
+
+body{
+	width: 100%;
+}
+
+.viewport-flip {
+	-webkit-perspective: 1000;
+	perspective: 1000;
+	position: absolute;
+}
+.flip {
+	-webkit-backface-visibility: hidden;
+	-webkit-transform: translateX(0); /* Needed to work around an iOS 3.1 bug that causes listview thumbs to disappear when -webkit-visibility:hidden is used. */
+	backface-visibility: hidden;
+	transform: translateX(0);
+}
+.flip.out {
+	-webkit-transform: rotateY(-90deg);
+	-webkit-animation-name: flipouttoleft;
+	-webkit-animation-duration: 175ms;
+	transform: rotateY(-90deg);
+	animation-name: flipouttoleft;
+	animation-duration: 175ms;
+}
+.flip.in {
+	-webkit-animation-name: flipintoright;
+	-webkit-animation-duration: 225ms;
+	animation-name: flipintoright;
+	animation-duration: 225ms;
+}
+
+@-webkit-keyframes flipouttoleft {
+    from { -webkit-transform: rotateY(0); }
+    to { -webkit-transform: rotateY(-90deg); }
+}
+@keyframes flipouttoleft {
+    from { transform: rotateY(0); }
+    to { transform: rotateY(-90deg); }
+}
+@-webkit-keyframes flipouttoright {
+    from { -webkit-transform: rotateY(0) ; }
+    to { -webkit-transform: rotateY(90deg); }
+}
+@keyframes flipouttoright {
+    from { transform: rotateY(0); }
+    to { transform: rotateY(90deg); }
+}
+@-webkit-keyframes flipintoleft {
+    from { -webkit-transform: rotateY(-90deg); }
+    to { -webkit-transform: rotateY(0); }
+}
+@keyframes flipintoleft {
+    from { transform: rotateY(-90deg); }
+    to { transform: rotateY(0); }
+}
+@-webkit-keyframes flipintoright {
+    from { -webkit-transform: rotateY(90deg); }
+    to { -webkit-transform: rotateY(0); }
+}
+@keyframes flipintoright {
+    from { transform: rotateY(90deg); }
+    to { transform: rotateY(0); }
+}
+
+#container{
+	width: 100%;
+}
+.content{
+	position: absolute;
+	left: 50%;
 	width: 748px;
 	margin:10px auto;
+	margin-left: -374px;
 	background-color: #F8F8F8;
 	border:1px solid #ccc;
 	box-shadow:0 0 10px #999;
@@ -9,6 +82,11 @@
 	line-height:1.4em;
     font:13.34px helvetica,arial,freesans,clean,sans-serif;
     color:black;
+}
+#text-container{
+	white-space: pre-wrap;
+	line-height: 150%;
+	font-size: 14px;
 }
 #markdown-container table{
 	font:13.34px helvetica,arial,freesans,clean,sans-serif;
@@ -98,5 +176,14 @@ table th{
 }
 table p{
 	margin: 0;
-
+}
+table tr:nth-child(odd){background:#FFF;}
+table tr:nth-child(even){background:#FAFAFA;}
+.katex-inline{
+	padding: 0 5px;
+}
+.katex-block{
+	margin: 20px 0;
+	text-align: center;
+	font-size: 16px;
 }
