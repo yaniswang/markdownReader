@@ -32,16 +32,14 @@
 
 	function toggleMode(){
 		if(isMarkdownMode){
-			console.log('显示text')
 			jMarkdownContainer.addClass('out').removeClass('in');
+			isMarkdownMode = false;
 			jMarkdownContainer.one('webkitAnimationEnd', function(){
 				jTextContainer.show().addClass('in').removeClass('out');
 				jMarkdownContainer.hide();
-				isMarkdownMode = false;
 			});
 		}
 		else{
-			console.log('显示mark')
 			jTextContainer.addClass('out').removeClass('in');
 			jTextContainer.one('webkitAnimationEnd', function(){
 				jMarkdownContainer.show().addClass('in').removeClass('out');
