@@ -1037,10 +1037,11 @@ showdown.subParser('blockGamut', function (text, options, globals) {
   text = text.replace(/^[ ]{0,2}([ ]?\-[ ]?){3,}[ \t]*$/gm, key);
   text = text.replace(/^[ ]{0,2}([ ]?_[ ]?){3,}[ \t]*$/gm, key);
 
-  text = showdown.subParser('tables')(text, options, globals);
   text = showdown.subParser('lists')(text, options, globals);
   text = showdown.subParser('codeBlocks')(text, options, globals);
   text = showdown.subParser('blockQuotes')(text, options, globals);
+  text = showdown.subParser('tables')(text, options, globals);
+  text = showdown.subParser('latex')(text, options, globals);
 
   // We already ran _HashHTMLBlocks() before, in Markdown(), but that
   // was to escape raw HTML in the original Markdown source. This time,
@@ -1135,7 +1136,7 @@ showdown.subParser('codeBlocks', function (text, options, globals) {
       end = '';
     }
 
-    codeblock = '<pre><code>' + codeblock + end + '</code></pre>';
+    codeblock = '<pre class="prettyprint linenums"><code>' + codeblock + end + '</code></pre>';
 
     return showdown.subParser('hashBlock')(codeblock, options, globals) + nextChar;
   });
@@ -1403,7 +1404,7 @@ showdown.subParser('githubCodeBlocks', function (text, options, globals) {
     codeblock = codeblock.replace(/^\n+/g, ''); // trim leading newlines
     codeblock = codeblock.replace(/\n+$/g, ''); // trim trailing whitespace
 
-    codeblock = '<pre><code' + (language ? ' class="' + language + ' language-' + language + '"' : '') + '>' + codeblock + end + '</code></pre>';
+    codeblock = '<pre class="prettyprint linenums"><code' + (language ? ' class="' + language + ' language-' + language + '"' : '') + '>' + codeblock + end + '</code></pre>';
 
     return showdown.subParser('hashBlock')(codeblock, options, globals);
   });
@@ -2242,7 +2243,7 @@ showdown.subParser('tables', function (text, options, globals) {
             tbl.push('</tbody>');
             tbl.push('</table>');
             // we are done with this table and we move along
-            out.push(tbl.join('\n'));
+            out.push(showdown.subParser('hashBlock')(tbl.join('\n'), options, globals));
             continue;
           }
         }
@@ -2259,6 +2260,27 @@ showdown.subParser('tables', function (text, options, globals) {
   } else {
     return text;
   }
+});
+
+showdown.subParser('latex', function (text, options, globals) {
+  text = text.replace(/(\\(?:~D){1,2})|\s*((?:~D){1,2})([\s\S]+?)\2/g, function(all, escape, tag, content){
+    var ret = content
+    try{
+      if(escape){
+        ret = all.substr(1);
+      }
+      else if(tag === '~D~D'){
+        content = content.replace(/\s+(.*?)([\r\n]|$)/g, '$1');
+        ret = '<div class="katex-block">'+katex.renderToString(content)+'</div>';
+      }
+      else{
+        ret = '<span class="katex-inline">'+katex.renderToString(content)+'</div>';
+      }
+    }
+    catch(e){}
+    return ret;
+  });
+  return text;
 });
 
 /**

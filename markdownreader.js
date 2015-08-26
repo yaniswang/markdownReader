@@ -63,8 +63,7 @@
 		strikethrough: true,
 		simplifiedAutoLink: true,
 		tasklists: true,
-		literalMidWordUnderscores: true,
-		extensions: ['katex'] 
+		literalMidWordUnderscores: true
 	});
 	var lastText = null;
 

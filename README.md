@@ -29,14 +29,35 @@ Tasklist:
 - [x] This task is done
 - [ ] This is still pending
 
+Code:
+-----------------
+
+    | Left-Aligned  | Center Aligned  | Right Aligned |
+    | :------------ |:---------------:| -----:|
+    | **col 3 is**      | some wordy text | $1600 |
+    | ~~col 2 is~~      | centered        |   $12 |
+    | zebra stripes | are neat        |    $1 |
+
+```
+function test() {
+  console.log("notice the blank line before this function?");
+}
+```
+
+```ruby
+require 'redcarpet'
+markdown = Redcarpet.new("Hello World!")
+puts markdown.to_html
+```
+
 Table:
 ---------------
 
 | Left-Aligned  | Center Aligned  | Right Aligned |
 | :------------ |:---------------:| -----:|
-| col 3 is      | some wordy text | \$1600 |
-| col 2 is      | centered        |   \$12 |
-| zebra stripes | are neat        |    \$1 |
+| **col 3 is**      | some wordy text | $1600 |
+| ~~col 2 is~~      | centered        |   $12 |
+| zebra stripes | are neat        |    $1 |
 
 LaTeX:
 ---------------
@@ -48,6 +69,7 @@ Block LaTeX:
 $$
 E=mc^2
 $$
+
 
 License
 ================

@@ -10,7 +10,7 @@
 	},
 	"permissions": ["tabs", "\u003Call_urls\u003E"],
 	"content_scripts": [{
-		"js": ["jquery-1.8.3.min.js", "prettify.js", "katex.min.js", "showdown.js", "showdown-katex.js", "markdownreader.js"],
+		"js": ["jquery-1.8.3.min.js", "prettify.js", "katex.min.js", "showdown.js", "markdownreader.js"],
 		"matches": ["*://*/*.md", "file://*/*.md", "*://*/*.markdown", "file://*/*.markdown", "*://*/*.mdown", "file://*/*.mdown", "*://*/*.mkdn", "file://*/*.mkdn", "*://*/*.mkd", "file://*/*.mkd", "*://*/*.text", "file://*/*.text", "*://*/*.mdtext", "file://*/*.mdtext", "*://*/*.mdtxt", "file://*/*.mdtxt"],
 		"run_at": "document_end"
 	}],
