@@ -1028,7 +1028,6 @@ showdown.subParser('autoLinks', function (text, options) {
  */
 showdown.subParser('blockGamut', function (text, options, globals) {
   'use strict';
-
   text = showdown.subParser('headers')(text, options, globals);
 
   // Do Horizontal Rules:
@@ -1042,6 +1041,7 @@ showdown.subParser('blockGamut', function (text, options, globals) {
   text = showdown.subParser('blockQuotes')(text, options, globals);
   text = showdown.subParser('tables')(text, options, globals);
   text = showdown.subParser('latex')(text, options, globals);
+  
 
   // We already ran _HashHTMLBlocks() before, in Markdown(), but that
   // was to escape raw HTML in the original Markdown source. This time,
@@ -1420,6 +1420,12 @@ showdown.subParser('hashBlock', function (text, options, globals) {
   'use strict';
   text = text.replace(/(^\n+|\n+$)/g, '');
   return '\n\n~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K\n\n';
+});
+
+showdown.subParser('hashCode', function (text, options, globals) {
+  'use strict';
+  text = text.replace(/(^\n+|\n+$)/g, '');
+  return '~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K';
 });
 
 showdown.subParser('hashElement', function (text, options, globals) {
@@ -1834,7 +1840,7 @@ showdown.subParser('lists', function (text, options, globals) {
       listStr = listStr.replace(/\s+$/, '');
     }
 
-    return listStr;
+    return showdown.subParser('hashBlock')(listStr, options, globals);
   }
 
   /**
@@ -2271,10 +2277,10 @@ showdown.subParser('latex', function (text, options, globals) {
       }
       else if(tag === '~D~D'){
         content = content.replace(/\s+(.*?)([\r\n]|$)/g, '$1');
-        ret = '<div class="katex-block">'+katex.renderToString(content)+'</div>';
+        ret = showdown.subParser('hashBlock')('<div class="katex-block">'+katex.renderToString(content)+'</div>', options, globals);
       }
       else{
-        ret = '<span class="katex-inline">'+katex.renderToString(content)+'</div>';
+        ret = showdown.subParser('hashCode')('<span class="katex-inline">'+katex.renderToString(content)+'</span>', options, globals);
       }
     }
     catch(e){}

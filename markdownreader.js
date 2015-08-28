@@ -66,6 +66,7 @@
 		literalMidWordUnderscores: true
 	});
 	var lastText = null;
+	var outlineCount = 0;
 
 	function updateMarkdown(text) {
 		if (text !== lastText) {
@@ -111,7 +112,8 @@
 			id++;
 		}
 		arrOutline.push('</ul>')
-		if(arrOutline.length > 2){
+		outlineCount = id;
+		if(outlineCount > 0){
 			jOutline.html(arrOutline.join(''));
             jOutline.find('ul').each(function(i,n){
                 var jThis = $(this);
@@ -127,11 +129,13 @@
 	}
 
 	function showOutline() {
-		var offset = jMarkdownContainer.offset();
-		jOutline.css({
-			left: offset.left + jMarkdownContainer.outerWidth() + 10 + 'px',
-			maxHeight: document.body.clientHeight - 30
-		}).show();
+		if(outlineCount > 0){
+			var offset = jMarkdownContainer.offset();
+			jOutline.css({
+				left: offset.left + jMarkdownContainer.outerWidth() + 10 + 'px',
+				maxHeight: document.body.clientHeight - 30
+			}).show();
+		}
 	}
 
 	function hideOutline(){
