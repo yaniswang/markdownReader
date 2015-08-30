@@ -62,7 +62,7 @@ Table:
 LaTeX:
 ---------------
 
-Inline LaTeX: $E=mc^2$
+Inline LaTeX: $$E=mc^2$$
 
 Block LaTeX:
 
@@ -70,6 +70,7 @@ $$
 E=mc^2
 $$
 
+Escaped LaTeX: \$$E=mc^2$$
 
 License
 ================

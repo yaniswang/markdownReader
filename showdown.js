@@ -2269,14 +2269,13 @@ showdown.subParser('tables', function (text, options, globals) {
 });
 
 showdown.subParser('latex', function (text, options, globals) {
-  text = text.replace(/(\\(?:~D){1,2})|\s*((?:~D){1,2})([\s\S]+?)\2/g, function(all, escape, tag, content){
+  text = text.replace(/(\\(?:~D~D))|([\r\n])?(~D~D)(?:latex)?([\s\S]+?)~D~D/g, function(all, escaped, lr, tag, content){
     var ret = content
     try{
-      if(escape){
+      if(escaped){
         ret = all.substr(1);
       }
-      else if(tag === '~D~D'){
-        content = content.replace(/\s+(.*?)([\r\n]|$)/g, '$1');
+      else if(lr){
         ret = showdown.subParser('hashBlock')('<div class="katex-block">'+katex.renderToString(content)+'</div>', options, globals);
       }
       else{
