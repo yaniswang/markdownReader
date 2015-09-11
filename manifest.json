@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Markdown Reader",
-	"version": "1.0.10",
+	"version": "1.0.11",
 	"description": "Read markdown file in Chrome.",
 	"icons": {
 		"128": "images/icon.png",
