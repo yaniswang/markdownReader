@@ -28,24 +28,28 @@
 	var jOutline = $('#markdown-outline');
 
 	var isMarkdownMode = true;
-	$(document.body).on('dblclick',toggleMode);
+	$(document).on('dblclick',toggleMode);
 
-	function toggleMode(){
-		if(isMarkdownMode){
-			jMarkdownContainer.addClass('out').removeClass('in');
-			isMarkdownMode = false;
-			jMarkdownContainer.one('webkitAnimationEnd', function(){
-				jTextContainer.show().addClass('in').removeClass('out');
-				jMarkdownContainer.hide();
-			});
-		}
-		else{
-			jTextContainer.addClass('out').removeClass('in');
-			jTextContainer.one('webkitAnimationEnd', function(){
-				jMarkdownContainer.show().addClass('in').removeClass('out');
-				jTextContainer.hide();
-				isMarkdownMode = true;
-			});
+	function toggleMode(e){
+		// 内容区外点击才会切换模式
+		if($(e.target).closest('.content').length === 0){
+			if(isMarkdownMode){
+				jMarkdownContainer.addClass('out').removeClass('in');
+				isMarkdownMode = false;
+				jMarkdownContainer.one('webkitAnimationEnd', function(){
+					jTextContainer.show().addClass('in').removeClass('out');
+					jMarkdownContainer.hide();
+				});
+			}
+			else{
+				jTextContainer.addClass('out').removeClass('in');
+				jTextContainer.one('webkitAnimationEnd', function(){
+					jMarkdownContainer.show().addClass('in').removeClass('out');
+					jTextContainer.hide();
+					isMarkdownMode = true;
+				});
+			}
+			return false;
 		}
 	}
 
@@ -71,7 +75,7 @@
 	function updateMarkdown(text) {
 		if (text !== lastText) {
 			lastText = text;
-			jTextContainer.text(text);
+			jTextContainer.text(text.replace(/\r\n?|\r?\n/g, '\r\n'));
 			jMarkdownContainer.html(markdownConverter.makeHtml(lastText));
 			prettyPrint();
 			updateOutline();
