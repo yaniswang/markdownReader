@@ -1,4 +1,4 @@
-;/*! showdown 23-08-2015 */
+;/*! showdown 13-05-2016 */
 (function(){
 /**
  * Created by Tivie on 13-07-2015.
@@ -333,10 +333,42 @@ function validate(extension, name) {
       type = ext.type = 'output';
     }
 
-    if (type !== 'lang' && type !== 'output') {
+    if (type !== 'lang' && type !== 'output' && type !== 'listener') {
       ret.valid = false;
-      ret.error = baseMsg + 'type ' + type + ' is not recognized. Valid values: "lang" or "output"';
+      ret.error = baseMsg + 'type ' + type + ' is not recognized. Valid values: "lang/language", "output/html" or "listener"';
       return ret;
+    }
+
+    if (type === 'listener') {
+      if (showdown.helper.isUndefined(ext.listeners)) {
+        ret.valid = false;
+        ret.error = baseMsg + '. Extensions of type "listener" must have a property called "listeners"';
+        return ret;
+      }
+    } else {
+      if (showdown.helper.isUndefined(ext.filter) && showdown.helper.isUndefined(ext.regex)) {
+        ret.valid = false;
+        ret.error = baseMsg + type + ' extensions must define either a "regex" property or a "filter" method';
+        return ret;
+      }
+    }
+
+    if (ext.listeners) {
+      if (typeof ext.listeners !== 'object') {
+        ret.valid = false;
+        ret.error = baseMsg + '"listeners" property must be an object but ' + typeof ext.listeners + ' given';
+        return ret;
+      }
+      for (var ln in ext.listeners) {
+        if (ext.listeners.hasOwnProperty(ln)) {
+          if (typeof ext.listeners[ln] !== 'function') {
+            ret.valid = false;
+            ret.error = baseMsg + '"listeners" property must be an hash of [event name]: [callback]. listeners.' + ln +
+              ' must be a function but ' + typeof ext.listeners[ln] + ' given';
+            return ret;
+          }
+        }
+      }
     }
 
     if (ext.filter) {
@@ -345,15 +377,13 @@ function validate(extension, name) {
         ret.error = baseMsg + '"filter" must be a function, but ' + typeof ext.filter + ' given';
         return ret;
       }
-
     } else if (ext.regex) {
       if (showdown.helper.isString(ext.regex)) {
         ext.regex = new RegExp(ext.regex, 'g');
       }
       if (!ext.regex instanceof RegExp) {
         ret.valid = false;
-        ret.error = baseMsg + '"regex" property must either be a string or a RegExp object, but ' +
-          typeof ext.regex + ' given';
+        ret.error = baseMsg + '"regex" property must either be a string or a RegExp object, but ' + typeof ext.regex + ' given';
         return ret;
       }
       if (showdown.helper.isUndefined(ext.replace)) {
@@ -361,17 +391,6 @@ function validate(extension, name) {
         ret.error = baseMsg + '"regex" extensions must implement a replace string or function';
         return ret;
       }
-
-    } else {
-      ret.valid = false;
-      ret.error = baseMsg + 'extensions must define either a "regex" property or a "filter" method';
-      return ret;
-    }
-
-    if (showdown.helper.isUndefined(ext.filter) && showdown.helper.isUndefined(ext.regex)) {
-      ret.valid = false;
-      ret.error = baseMsg + 'output extensions must define a filter property';
-      return ret;
     }
   }
   return ret;
@@ -410,6 +429,18 @@ if (!showdown.hasOwnProperty('helper')) {
 showdown.helper.isString = function isString(a) {
   'use strict';
   return (typeof a === 'string' || a instanceof String);
+};
+
+/**
+ * Check if var is a function
+ * @static
+ * @param {string} a
+ * @returns {boolean}
+ */
+showdown.helper.isFunction = function isFunction(a) {
+  'use strict';
+  var getType = {};
+  return a && getType.toString.call(a) === '[object Function]';
 };
 
 /**
@@ -501,6 +532,139 @@ showdown.helper.escapeCharacters = function escapeCharacters(text, charsToEscape
   return text;
 };
 
+var rgxFindMatchPos = function (str, left, right, flags) {
+  'use strict';
+  var f = flags || '',
+    g = f.indexOf('g') > -1,
+    x = new RegExp(left + '|' + right, 'g' + f.replace(/g/g, '')),
+    l = new RegExp(left, f.replace(/g/g, '')),
+    pos = [],
+    t, s, m, start, end;
+
+  do {
+    t = 0;
+    while ((m = x.exec(str))) {
+      if (l.test(m[0])) {
+        if (!(t++)) {
+          s = x.lastIndex;
+          start = s - m[0].length;
+        }
+      } else if (t) {
+        if (!--t) {
+          end = m.index + m[0].length;
+          var obj = {
+            left: {start: start, end: s},
+            match: {start: s, end: m.index},
+            right: {start: m.index, end: end},
+            wholeMatch: {start: start, end: end}
+          };
+          pos.push(obj);
+          if (!g) {
+            return pos;
+          }
+        }
+      }
+    }
+  } while (t && (x.lastIndex = s));
+
+  return pos;
+};
+
+/**
+ * matchRecursiveRegExp
+ *
+ * (c) 2007 Steven Levithan <stevenlevithan.com>
+ * MIT License
+ *
+ * Accepts a string to search, a left and right format delimiter
+ * as regex patterns, and optional regex flags. Returns an array
+ * of matches, allowing nested instances of left/right delimiters.
+ * Use the "g" flag to return all matches, otherwise only the
+ * first is returned. Be careful to ensure that the left and
+ * right format delimiters produce mutually exclusive matches.
+ * Backreferences are not supported within the right delimiter
+ * due to how it is internally combined with the left delimiter.
+ * When matching strings whose format delimiters are unbalanced
+ * to the left or right, the output is intentionally as a
+ * conventional regex library with recursion support would
+ * produce, e.g. "<<x>" and "<x>>" both produce ["x"] when using
+ * "<" and ">" as the delimiters (both strings contain a single,
+ * balanced instance of "<x>").
+ *
+ * examples:
+ * matchRecursiveRegExp("test", "\\(", "\\)")
+ * returns: []
+ * matchRecursiveRegExp("<t<<e>><s>>t<>", "<", ">", "g")
+ * returns: ["t<<e>><s>", ""]
+ * matchRecursiveRegExp("<div id=\"x\">test</div>", "<div\\b[^>]*>", "</div>", "gi")
+ * returns: ["test"]
+ */
+showdown.helper.matchRecursiveRegExp = function (str, left, right, flags) {
+  'use strict';
+
+  var matchPos = rgxFindMatchPos (str, left, right, flags),
+    results = [];
+
+  for (var i = 0; i < matchPos.length; ++i) {
+    results.push([
+      str.slice(matchPos[i].wholeMatch.start, matchPos[i].wholeMatch.end),
+      str.slice(matchPos[i].match.start, matchPos[i].match.end),
+      str.slice(matchPos[i].left.start, matchPos[i].left.end),
+      str.slice(matchPos[i].right.start, matchPos[i].right.end)
+    ]);
+  }
+  return results;
+};
+
+/**
+ *
+ * @param {string} str
+ * @param {string|function} replacement
+ * @param {string} left
+ * @param {string} right
+ * @param {string} flags
+ * @returns {string}
+ */
+showdown.helper.replaceRecursiveRegExp = function (str, replacement, left, right, flags) {
+  'use strict';
+
+  if (!showdown.helper.isFunction(replacement)) {
+    var repStr = replacement;
+    replacement = function () {
+      return repStr;
+    };
+  }
+
+  var matchPos = rgxFindMatchPos(str, left, right, flags),
+      finalStr = str,
+      lng = matchPos.length;
+
+  if (lng > 0) {
+    var bits = [];
+    if (matchPos[0].wholeMatch.start !== 0) {
+      bits.push(str.slice(0, matchPos[0].wholeMatch.start));
+    }
+    for (var i = 0; i < lng; ++i) {
+      bits.push(
+        replacement(
+          str.slice(matchPos[i].wholeMatch.start, matchPos[i].wholeMatch.end),
+          str.slice(matchPos[i].match.start, matchPos[i].match.end),
+          str.slice(matchPos[i].left.start, matchPos[i].left.end),
+          str.slice(matchPos[i].right.start, matchPos[i].right.end)
+        )
+      );
+      if (i < lng - 1) {
+        bits.push(str.slice(matchPos[i].wholeMatch.end, matchPos[i + 1].wholeMatch.start));
+      }
+    }
+    if (matchPos[lng - 1].wholeMatch.end < str.length) {
+      bits.push(str.slice(matchPos[lng - 1].wholeMatch.end));
+    }
+    finalStr = bits.join('');
+  }
+  return finalStr;
+};
+
 /**
  * POLYFILLS
  */
@@ -513,6 +677,10 @@ if (showdown.helper.isUndefined(console)) {
     log: function (msg) {
       'use strict';
       alert(msg);
+    },
+    error: function (msg) {
+      'use strict';
+      throw msg;
     }
   };
 }
@@ -525,12 +693,7 @@ if (showdown.helper.isUndefined(console)) {
  * Showdown Converter class
  * @class
  * @param {object} [converterOptions]
- * @returns {
- *  {makeHtml: Function},
- *  {setOption: Function},
- *  {getOption: Function},
- *  {getOptions: Function}
- * }
+ * @returns {Converter}
  */
 showdown.Converter = function (converterOptions) {
   'use strict';
@@ -558,17 +721,11 @@ showdown.Converter = function (converterOptions) {
       outputModifiers = [],
 
       /**
-       * The parser Order
+       * Event listeners
        * @private
-       * @type {string[]}
+       * @type {{}}
        */
-      parserOrder = [
-        'githubCodeBlocks',
-        'hashHTMLBlocks',
-        'stripLinkDefinitions',
-        'blockGamut',
-        'unescapeSpecialChars'
-      ];
+      listeners = {};
 
   _constructor();
 
@@ -647,6 +804,7 @@ showdown.Converter = function (converterOptions) {
 
     for (var i = 0; i < ext.length; ++i) {
       switch (ext[i].type) {
+
         case 'lang':
           langExtensions.push(ext[i]);
           break;
@@ -654,12 +812,16 @@ showdown.Converter = function (converterOptions) {
         case 'output':
           outputModifiers.push(ext[i]);
           break;
-
-        default:
-          // should never reach here
-          throw Error('Extension loader error: Type unrecognized!!!');
+      }
+      if (ext[i].hasOwnProperty(listeners)) {
+        for (var ln in ext[i].listeners) {
+          if (ext[i].listeners.hasOwnProperty(ln)) {
+            listen(ln, ext[i].listeners[ln]);
+          }
+        }
       }
     }
+
   }
 
   /**
@@ -695,6 +857,58 @@ showdown.Converter = function (converterOptions) {
   }
 
   /**
+   * Listen to an event
+   * @param {string} name
+   * @param {function} callback
+   */
+  function listen(name, callback) {
+    if (!showdown.helper.isString(name)) {
+      throw Error('Invalid argument in converter.listen() method: name must be a string, but ' + typeof name + ' given');
+    }
+
+    if (typeof callback !== 'function') {
+      throw Error('Invalid argument in converter.listen() method: callback must be a function, but ' + typeof callback + ' given');
+    }
+
+    if (!listeners.hasOwnProperty(name)) {
+      listeners[name] = [];
+    }
+    listeners[name].push(callback);
+  }
+
+  /**
+   * Dispatch an event
+   * @private
+   * @param {string} evtName Event name
+   * @param {string} text Text
+   * @param {{}} options Converter Options
+   * @param {{}} globals
+   * @returns {string}
+   */
+  this._dispatch = function dispatch (evtName, text, options, globals) {
+    if (listeners.hasOwnProperty(evtName)) {
+      for (var ei = 0; ei < listeners[evtName].length; ++ei) {
+        var nText = listeners[evtName][ei](evtName, text, this, options, globals);
+        if (nText && typeof nText !== 'undefined') {
+          text = nText;
+        }
+      }
+    }
+    return text;
+  };
+
+  /**
+   * Listen to an event
+   * @param {string} name
+   * @param {function} callback
+   * @returns {showdown.Converter}
+   */
+  this.listen = function (name, callback) {
+    listen(name, callback);
+    return this;
+  };
+
+  /**
    * Converts a markdown string into HTML
    * @param {string} text
    * @returns {*}
@@ -707,6 +921,8 @@ showdown.Converter = function (converterOptions) {
 
     var globals = {
       gHtmlBlocks:     [],
+      gHtmlMdBlocks:   [],
+      gHtmlSpans:      [],
       gUrls:           {},
       gTitles:         {},
       gDimensions:     {},
@@ -714,7 +930,8 @@ showdown.Converter = function (converterOptions) {
       hashLinkCounts:  {},
       langExtensions:  langExtensions,
       outputModifiers: outputModifiers,
-      converter:       this
+      converter:       this,
+      ghCodeBlocks:    []
     };
 
     // attacklab: Replace ~ with ~T
@@ -746,11 +963,15 @@ showdown.Converter = function (converterOptions) {
       text = showdown.subParser('runExtension')(ext, text, options, globals);
     });
 
-    // Run all registered parsers
-    for (var i = 0; i < parserOrder.length; ++i) {
-      var name = parserOrder[i];
-      text = parsers[name](text, options, globals);
-    }
+    // run the sub parsers
+    text = showdown.subParser('hashPreCodeTags')(text, options, globals);
+    text = showdown.subParser('githubCodeBlocks')(text, options, globals);
+    text = showdown.subParser('hashHTMLBlocks')(text, options, globals);
+    text = showdown.subParser('hashHTMLSpans')(text, options, globals);
+    text = showdown.subParser('stripLinkDefinitions')(text, options, globals);
+    text = showdown.subParser('blockGamut')(text, options, globals);
+    text = showdown.subParser('unhashHTMLSpans')(text, options, globals);
+    text = showdown.subParser('unescapeSpecialChars')(text, options, globals);
 
     // attacklab: Restore dollar signs
     text = text.replace(/~D/g, '$$');
@@ -865,8 +1086,10 @@ showdown.Converter = function (converterOptions) {
 /**
  * Turn Markdown link shortcuts into XHTML <a> tags.
  */
-showdown.subParser('anchors', function (text, config, globals) {
+showdown.subParser('anchors', function (text, options, globals) {
   'use strict';
+
+  text = globals.converter._dispatch('anchors.before', text, options, globals);
 
   var writeAnchorTag = function (wholeMatch, m1, m2, m3, m4, m5, m6, m7) {
     if (showdown.helper.isUndefined(m7)) {
@@ -937,7 +1160,7 @@ showdown.subParser('anchors', function (text, config, globals) {
    )()()()()					// pad remaining backreferences
    /g,_DoAnchors_callback);
    */
-  text = text.replace(/(\[((?:\[[^\]]*\]|[^\[\]])*)\][ ]?(?:\n[ ]*)?\[(.*?)\])()()()()/g, writeAnchorTag);
+  text = text.replace(/(\[((?:\[[^\]]*]|[^\[\]])*)][ ]?(?:\n[ ]*)?\[(.*?)])()()()()/g, writeAnchorTag);
 
   //
   // Next, inline-style links: [link text](url "optional title")
@@ -970,7 +1193,7 @@ showdown.subParser('anchors', function (text, config, globals) {
    )
    /g,writeAnchorTag);
    */
-  text = text.replace(/(\[((?:\[[^\]]*\]|[^\[\]])*)\]\([ \t]*()<?(.*?(?:\(.*?\).*?)?)>?[ \t]*((['"])(.*?)\6[ \t]*)?\))/g,
+  text = text.replace(/(\[((?:\[[^\]]*]|[^\[\]])*)]\([ \t]*()<?(.*?(?:\(.*?\).*?)?)>?[ \t]*((['"])(.*?)\6[ \t]*)?\))/g,
                       writeAnchorTag);
 
   //
@@ -988,20 +1211,20 @@ showdown.subParser('anchors', function (text, config, globals) {
    )()()()()()      // pad rest of backreferences
    /g, writeAnchorTag);
    */
-  text = text.replace(/(\[([^\[\]]+)\])()()()()()/g, writeAnchorTag);
+  text = text.replace(/(\[([^\[\]]+)])()()()()()/g, writeAnchorTag);
 
+  text = globals.converter._dispatch('anchors.after', text, options, globals);
   return text;
-
 });
 
-showdown.subParser('autoLinks', function (text, options) {
+showdown.subParser('autoLinks', function (text, options, globals) {
   'use strict';
 
-  //simpleURLRegex  = /\b(((https?|ftp|dict):\/\/|www\.)[-.+~:?#@!$&'()*,;=[\]\w]+)\b/gi,
+  text = globals.converter._dispatch('autoLinks.before', text, options, globals);
 
   var simpleURLRegex  = /\b(((https?|ftp|dict):\/\/|www\.)[^'">\s]+\.[^'">\s]+)(?=\s|$)(?!["<>])/gi,
       delimUrlRegex   = /<(((https?|ftp|dict):\/\/|www\.)[^'">\s]+)>/gi,
-      simpleMailRegex = /\b(?:mailto:)?([-.\w]+@[-a-z0-9]+(\.[-a-z0-9]+)*\.[a-z]+)\b/gi,
+      simpleMailRegex = /(?:^|[ \n\t])([A-Za-z0-9!#$%&'*+-/=?^_`\{|}~\.]+@[-a-z0-9]+(\.[-a-z0-9]+)*\.[a-z]+)(?:$|[ \n\t])/gi,
       delimMailRegex  = /<(?:mailto:)?([-.\w]+@[-a-z0-9]+(\.[-a-z0-9]+)*\.[a-z]+)>/gi;
 
   text = text.replace(delimUrlRegex, '<a href=\"$1\">$1</a>');
@@ -1019,6 +1242,8 @@ showdown.subParser('autoLinks', function (text, options) {
     return showdown.subParser('encodeEmailAddress')(unescapedStr);
   }
 
+  text = globals.converter._dispatch('autoLinks.after', text, options, globals);
+
   return text;
 });
 
@@ -1028,6 +1253,12 @@ showdown.subParser('autoLinks', function (text, options) {
  */
 showdown.subParser('blockGamut', function (text, options, globals) {
   'use strict';
+
+  text = globals.converter._dispatch('blockGamut.before', text, options, globals);
+
+  // we parse blockquotes first so that we can have headings and hrs
+  // inside blockquotes
+  text = showdown.subParser('blockQuotes')(text, options, globals);
   text = showdown.subParser('headers')(text, options, globals);
 
   // Do Horizontal Rules:
@@ -1038,10 +1269,7 @@ showdown.subParser('blockGamut', function (text, options, globals) {
 
   text = showdown.subParser('lists')(text, options, globals);
   text = showdown.subParser('codeBlocks')(text, options, globals);
-  text = showdown.subParser('blockQuotes')(text, options, globals);
   text = showdown.subParser('tables')(text, options, globals);
-  text = showdown.subParser('latex')(text, options, globals);
-  
 
   // We already ran _HashHTMLBlocks() before, in Markdown(), but that
   // was to escape raw HTML in the original Markdown source. This time,
@@ -1050,13 +1278,15 @@ showdown.subParser('blockGamut', function (text, options, globals) {
   text = showdown.subParser('hashHTMLBlocks')(text, options, globals);
   text = showdown.subParser('paragraphs')(text, options, globals);
 
-  return text;
+  text = globals.converter._dispatch('blockGamut.after', text, options, globals);
 
+  return text;
 });
 
 showdown.subParser('blockQuotes', function (text, options, globals) {
   'use strict';
 
+  text = globals.converter._dispatch('blockQuotes.before', text, options, globals);
   /*
    text = text.replace(/
    (								// Wrap whole match in $1
@@ -1070,7 +1300,7 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
    /gm, function(){...});
    */
 
-  text = text.replace(/((^[ \t]*>[ \t]?.+\n(.+\n)*\n*)+)/gm, function (wholeMatch, m1) {
+  text = text.replace(/((^[ \t]{0,3}>[ \t]?.+\n(.+\n)*\n*)+)/gm, function (wholeMatch, m1) {
     var bq = m1;
 
     // attacklab: hack around Konqueror 3.5.4 bug:
@@ -1081,6 +1311,7 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
     bq = bq.replace(/~0/g, '');
 
     bq = bq.replace(/^[ \t]+$/gm, ''); // trim whitespace-only lines
+    bq = showdown.subParser('githubCodeBlocks')(bq, options, globals);
     bq = showdown.subParser('blockGamut')(bq, options, globals); // recurse
 
     bq = bq.replace(/(^|\n)/g, '$1  ');
@@ -1095,6 +1326,8 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
 
     return showdown.subParser('hashBlock')('<blockquote>\n' + bq + '\n</blockquote>', options, globals);
   });
+
+  text = globals.converter._dispatch('blockQuotes.after', text, options, globals);
   return text;
 });
 
@@ -1104,6 +1337,7 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
 showdown.subParser('codeBlocks', function (text, options, globals) {
   'use strict';
 
+  text = globals.converter._dispatch('codeBlocks.before', text, options, globals);
   /*
    text = text.replace(text,
    /(?:\n\n|^)
@@ -1136,7 +1370,7 @@ showdown.subParser('codeBlocks', function (text, options, globals) {
       end = '';
     }
 
-    codeblock = '<pre class="prettyprint linenums"><code>' + codeblock + end + '</code></pre>';
+    codeblock = '<pre><code>' + codeblock + end + '</code></pre>';
 
     return showdown.subParser('hashBlock')(codeblock, options, globals) + nextChar;
   });
@@ -1144,6 +1378,7 @@ showdown.subParser('codeBlocks', function (text, options, globals) {
   // attacklab: strip sentinel
   text = text.replace(/~0/, '');
 
+  text = globals.converter._dispatch('codeBlocks.after', text, options, globals);
   return text;
 });
 
@@ -1172,16 +1407,10 @@ showdown.subParser('codeBlocks', function (text, options, globals) {
  *
  *         ... type <code>`bar`</code> ...
  */
-showdown.subParser('codeSpans', function (text) {
+showdown.subParser('codeSpans', function (text, options, globals) {
   'use strict';
 
-  //special case -> literal html code tag
-  text = text.replace(/(<code[^><]*?>)([^]*?)<\/code>/g, function (wholeMatch, tag, c) {
-    c = c.replace(/^([ \t]*)/g, '');	// leading whitespace
-    c = c.replace(/[ \t]*$/g, '');	// trailing whitespace
-    c = showdown.subParser('encodeCode')(c);
-    return tag + c + '</code>';
-  });
+  text = globals.converter._dispatch('codeSpans.before', text, options, globals);
 
   /*
    text = text.replace(/
@@ -1205,6 +1434,7 @@ showdown.subParser('codeSpans', function (text) {
     }
   );
 
+  text = globals.converter._dispatch('codeSpans.after', text, options, globals);
   return text;
 });
 
@@ -1394,38 +1624,39 @@ showdown.subParser('githubCodeBlocks', function (text, options, globals) {
     return text;
   }
 
+  text = globals.converter._dispatch('githubCodeBlocks.before', text, options, globals);
+
   text += '~0';
 
   text = text.replace(/(?:^|\n)```(.*)\n([\s\S]*?)\n```/g, function (wholeMatch, language, codeblock) {
     var end = (options.omitExtraWLInCodeBlocks) ? '' : '\n';
 
+    // First parse the github code block
     codeblock = showdown.subParser('encodeCode')(codeblock);
     codeblock = showdown.subParser('detab')(codeblock);
     codeblock = codeblock.replace(/^\n+/g, ''); // trim leading newlines
     codeblock = codeblock.replace(/\n+$/g, ''); // trim trailing whitespace
 
-    codeblock = '<pre class="prettyprint linenums"><code' + (language ? ' class="' + language + ' language-' + language + '"' : '') + '>' + codeblock + end + '</code></pre>';
+    codeblock = '<pre><code' + (language ? ' class="' + language + ' language-' + language + '"' : '') + '>' + codeblock + end + '</code></pre>';
 
-    return showdown.subParser('hashBlock')(codeblock, options, globals);
+    codeblock = showdown.subParser('hashBlock')(codeblock, options, globals);
+
+    // Since GHCodeblocks can be false positives, we need to
+    // store the primitive text and the parsed text in a global var,
+    // and then return a token
+    return '\n\n~G' + (globals.ghCodeBlocks.push({text: wholeMatch, codeblock: codeblock}) - 1) + 'G\n\n';
   });
 
   // attacklab: strip sentinel
   text = text.replace(/~0/, '');
 
-  return text;
-
+  return globals.converter._dispatch('githubCodeBlocks.after', text, options, globals);
 });
 
 showdown.subParser('hashBlock', function (text, options, globals) {
   'use strict';
   text = text.replace(/(^\n+|\n+$)/g, '');
   return '\n\n~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K\n\n';
-});
-
-showdown.subParser('hashCode', function (text, options, globals) {
-  'use strict';
-  text = text.replace(/(^\n+|\n+$)/g, '');
-  return '~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K';
 });
 
 showdown.subParser('hashElement', function (text, options, globals) {
@@ -1451,139 +1682,118 @@ showdown.subParser('hashElement', function (text, options, globals) {
 showdown.subParser('hashHTMLBlocks', function (text, options, globals) {
   'use strict';
 
-  // attacklab: Double up blank lines to reduce lookaround
-  text = text.replace(/\n/g, '\n\n');
+  var blockTags = [
+      'pre',
+      'div',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'blockquote',
+      'table',
+      'dl',
+      'ol',
+      'ul',
+      'script',
+      'noscript',
+      'form',
+      'fieldset',
+      'iframe',
+      'math',
+      'style',
+      'section',
+      'header',
+      'footer',
+      'nav',
+      'article',
+      'aside',
+      'address',
+      'audio',
+      'canvas',
+      'figure',
+      'hgroup',
+      'output',
+      'video',
+      'p'
+    ],
+    repFunc = function (wholeMatch, match, left, right) {
+      var txt = wholeMatch;
+      // check if this html element is marked as markdown
+      // if so, it's contents should be parsed as markdown
+      if (left.search(/\bmarkdown\b/) !== -1) {
+        txt = left + globals.converter.makeHtml(match) + right;
+      }
+      return '\n\n~K' + (globals.gHtmlBlocks.push(txt) - 1) + 'K\n\n';
+    };
 
-  // Hashify HTML blocks:
-  // We only want to do this for block-level HTML tags, such as headers,
-  // lists, and tables. That's because we still want to wrap <p>s around
-  // "paragraphs" that are wrapped in non-block-level tags, such as anchors,
-  // phrase emphasis, and spans. The list of tags we're looking for is
-  // hard-coded:
-  //var block_tags_a =
-  // 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|ins|del|style|section|header|footer|nav|article|aside';
-  // var block_tags_b =
-  // 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|style|section|header|footer|nav|article|aside';
+  for (var i = 0; i < blockTags.length; ++i) {
+    text = showdown.helper.replaceRecursiveRegExp(text, repFunc, '^(?: |\\t){0,3}<' + blockTags[i] + '\\b[^>]*>', '</' + blockTags[i] + '>', 'gim');
+  }
 
-  // First, look for nested blocks, e.g.:
-  //   <div>
-  //     <div>
-  //     tags for inner block must be indented.
-  //     </div>
-  //   </div>
-  //
-  // The outermost tags must start at the left margin for this to match, and
-  // the inner nested divs must be indented.
-  // We need to do this before the next, more liberal match, because the next
-  // match will start at the first `<div>` and stop at the first `</div>`.
-
-  // attacklab: This regex can be expensive when it fails.
-  /*
-   var text = text.replace(/
-   (						// save in $1
-   ^					// start of line  (with /m)
-   <($block_tags_a)	// start tag = $2
-   \b					// word break
-   // attacklab: hack around khtml/pcre bug...
-   [^\r]*?\n			// any number of lines, minimally matching
-   </\2>				// the matching end tag
-   [ \t]*				// trailing spaces/tabs
-   (?=\n+)				// followed by a newline
-   )						// attacklab: there are sentinel newlines at end of document
-   /gm,function(){...}};
-   */
-  text = text.replace(/^(<(p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|ins|del)\b[^\r]*?\n<\/\2>[ \t]*(?=\n+))/gm,
-                      showdown.subParser('hashElement')(text, options, globals));
-
-  //
-  // Now match more liberally, simply from `\n<tag>` to `</tag>\n`
-  //
-
-  /*
-   var text = text.replace(/
-   (						// save in $1
-   ^					// start of line  (with /m)
-   <($block_tags_b)	// start tag = $2
-   \b					// word break
-   // attacklab: hack around khtml/pcre bug...
-   [^\r]*?				// any number of lines, minimally matching
-   </\2>				// the matching end tag
-   [ \t]*				// trailing spaces/tabs
-   (?=\n+)				// followed by a newline
-   )						// attacklab: there are sentinel newlines at end of document
-   /gm,function(){...}};
-   */
-  text = text.replace(/^(<(p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|style|section|header|footer|nav|article|aside|address|audio|canvas|figure|hgroup|output|video)\b[^\r]*?<\/\2>[ \t]*(?=\n+)\n)/gm,
-                      showdown.subParser('hashElement')(text, options, globals));
-
-  // Special case just for <hr />. It was easier to make a special case than
-  // to make the other regex more complicated.
-
-  /*
-   text = text.replace(/
-   (						// save in $1
-   \n\n				// Starting after a blank line
-   [ ]{0,3}
-   (<(hr)				// start tag = $2
-   \b					// word break
-   ([^<>])*?			//
-   \/?>)				// the matching end tag
-   [ \t]*
-   (?=\n{2,})			// followed by a blank line
-   )
-   /g,showdown.subParser('hashElement')(text, options, globals));
-   */
+  // HR SPECIAL CASE
   text = text.replace(/(\n[ ]{0,3}(<(hr)\b([^<>])*?\/?>)[ \t]*(?=\n{2,}))/g,
-                      showdown.subParser('hashElement')(text, options, globals));
+    showdown.subParser('hashElement')(text, options, globals));
 
   // Special case for standalone HTML comments:
-
-  /*
-   text = text.replace(/
-   (						// save in $1
-   \n\n				// Starting after a blank line
-   [ ]{0,3}			// attacklab: g_tab_width - 1
-   <!
-   (--[^\r]*?--\s*)+
-   >
-   [ \t]*
-   (?=\n{2,})			// followed by a blank line
-   )
-   /g,showdown.subParser('hashElement')(text, options, globals));
-   */
-  text = text.replace(/(\n\n[ ]{0,3}<!(--[^\r]*?--\s*)+>[ \t]*(?=\n{2,}))/g,
-                      showdown.subParser('hashElement')(text, options, globals));
+  text = text.replace(/(<!(--[^\r]*?--\s*)+>[ \t]*(?=\n{2,}))/g,
+    showdown.subParser('hashElement')(text, options, globals));
 
   // PHP and ASP-style processor instructions (<?...?> and <%...%>)
-
-  /*
-   text = text.replace(/
-   (?:
-   \n\n				// Starting after a blank line
-   )
-   (						// save in $1
-   [ ]{0,3}			// attacklab: g_tab_width - 1
-   (?:
-   <([?%])			// $2
-   [^\r]*?
-   \2>
-   )
-   [ \t]*
-   (?=\n{2,})			// followed by a blank line
-   )
-   /g,showdown.subParser('hashElement')(text, options, globals));
-   */
   text = text.replace(/(?:\n\n)([ ]{0,3}(?:<([?%])[^\r]*?\2>)[ \t]*(?=\n{2,}))/g,
-                      showdown.subParser('hashElement')(text, options, globals));
+    showdown.subParser('hashElement')(text, options, globals));
 
-  // attacklab: Undo double lines (see comment at top of this function)
-  text = text.replace(/\n\n/g, '\n');
   return text;
+});
 
+/**
+ * Hash span elements that should not be parsed as markdown
+ */
+showdown.subParser('hashHTMLSpans', function (text, config, globals) {
+  'use strict';
+
+  var matches = showdown.helper.matchRecursiveRegExp(text, '<code\\b[^>]*>', '</code>', 'gi');
+
+  for (var i = 0; i < matches.length; ++i) {
+    text = text.replace(matches[i][0], '~L' + (globals.gHtmlSpans.push(matches[i][0]) - 1) + 'L');
+  }
+  return text;
+});
+
+/**
+ * Unhash HTML spans
+ */
+showdown.subParser('unhashHTMLSpans', function (text, config, globals) {
+  'use strict';
+
+  for (var i = 0; i < globals.gHtmlSpans.length; ++i) {
+    text = text.replace('~L' + i + 'L', globals.gHtmlSpans[i]);
+  }
+
+  return text;
+});
+
+/**
+ * Hash span elements that should not be parsed as markdown
+ */
+showdown.subParser('hashPreCodeTags', function (text, config, globals) {
+  'use strict';
+
+  var repFunc = function (wholeMatch, match, left, right) {
+    // encode html entities
+    var codeblock = left + showdown.subParser('encodeCode')(match) + right;
+    return '\n\n~G' + (globals.ghCodeBlocks.push({text: wholeMatch, codeblock: codeblock}) - 1) + 'G\n\n';
+  };
+
+  text = showdown.helper.replaceRecursiveRegExp(text, repFunc, '^(?: |\\t){0,3}<pre\\b[^>]*>\\s*<code\\b[^>]*>', '^(?: |\\t){0,3}</code>\\s*</pre>', 'gim');
+  return text;
 });
 
 showdown.subParser('headers', function (text, options, globals) {
   'use strict';
+
+  text = globals.converter._dispatch('headers.before', text, options, globals);
 
   var prefixHeader = options.prefixHeaderId,
       headerLevelStart = (isNaN(parseInt(options.headerLevelStart))) ? 1 : parseInt(options.headerLevelStart),
@@ -1652,6 +1862,7 @@ showdown.subParser('headers', function (text, options, globals) {
     return title;
   }
 
+  text = globals.converter._dispatch('headers.after', text, options, globals);
   return text;
 });
 
@@ -1660,6 +1871,8 @@ showdown.subParser('headers', function (text, options, globals) {
  */
 showdown.subParser('images', function (text, options, globals) {
   'use strict';
+
+  text = globals.converter._dispatch('images.before', text, options, globals);
 
   var inlineRegExp    = /!\[(.*?)]\s?\([ \t]*()<?(\S+?)>?(?: =([*\d]+[A-Za-z%]{0,4})x([*\d]+[A-Za-z%]{0,4}))?[ \t]*(?:(['"])(.*?)\6[ \t]*)?\)/g,
       referenceRegExp = /!\[(.*?)][ ]?(?:\n[ ]*)?\[(.*?)]()()()()()/g;
@@ -1727,11 +1940,14 @@ showdown.subParser('images', function (text, options, globals) {
   // Next, handle inline images:  ![alt text](url =<width>x<height> "optional title")
   text = text.replace(inlineRegExp, writeImageTag);
 
+  text = globals.converter._dispatch('images.after', text, options, globals);
   return text;
 });
 
-showdown.subParser('italicsAndBold', function (text, options) {
+showdown.subParser('italicsAndBold', function (text, options, globals) {
   'use strict';
+
+  text = globals.converter._dispatch('italicsAndBold.before', text, options, globals);
 
   if (options.literalMidWordUnderscores) {
     //underscores
@@ -1739,14 +1955,16 @@ showdown.subParser('italicsAndBold', function (text, options) {
     text = text.replace(/(^|\s|>|\b)__(?=\S)([^]+?)__(?=\b|<|\s|$)/gm, '$1<strong>$2</strong>');
     text = text.replace(/(^|\s|>|\b)_(?=\S)([^]+?)_(?=\b|<|\s|$)/gm, '$1<em>$2</em>');
     //asterisks
-    text = text.replace(/\*\*(?=\S)([^]+?)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/\*(?=\S)([^]+?)\*/g, '<em>$1</em>');
+    text = text.replace(/(\*\*)(?=\S)([^\r]*?\S[*]*)\1/g, '<strong>$2</strong>');
+    text = text.replace(/(\*)(?=\S)([^\r]*?\S)\1/g, '<em>$2</em>');
 
   } else {
     // <strong> must go first:
     text = text.replace(/(\*\*|__)(?=\S)([^\r]*?\S[*_]*)\1/g, '<strong>$2</strong>');
     text = text.replace(/(\*|_)(?=\S)([^\r]*?\S)\1/g, '<em>$2</em>');
   }
+
+  text = globals.converter._dispatch('italicsAndBold.after', text, options, globals);
   return text;
 });
 
@@ -1756,10 +1974,12 @@ showdown.subParser('italicsAndBold', function (text, options) {
 showdown.subParser('lists', function (text, options, globals) {
   'use strict';
 
+  text = globals.converter._dispatch('lists.before', text, options, globals);
   /**
    * Process the contents of a single ordered or unordered list, splitting it
    * into individual list items.
    * @param {string} listStr
+   * @param {boolean} trimTrailing
    * @returns {string}
    */
   function processListItems (listStr, trimTrailing) {
@@ -1791,7 +2011,7 @@ showdown.subParser('lists', function (text, options, globals) {
     // attacklab: add sentinel to emulate \z
     listStr += '~0';
 
-    var rgx = /(\n)?(^[ \t]*)([*+-]|\d+[.])[ \t]+((\[(x| )?])?[ \t]*[^\r]+?(\n{1,2}))(?=\n*(~0|\2([*+-]|\d+[.])[ \t]+))/gm,
+    var rgx = /(\n)?(^[ \t]*)([*+-]|\d+[.])[ \t]+((\[(x|X| )?])?[ \t]*[^\r]+?(\n{1,2}))(?=\n*(~0|\2([*+-]|\d+[.])[ \t]+))/gm,
         isParagraphed = (/\n[ \t]*\n(?!~0)/.test(listStr));
 
     listStr = listStr.replace(rgx, function (wholeMatch, m1, m2, m3, m4, taskbtn, checked) {
@@ -1802,7 +2022,7 @@ showdown.subParser('lists', function (text, options, globals) {
       // Support for github tasklists
       if (taskbtn && options.tasklists) {
         bulletStyle = ' class="task-list-item" style="list-style-type: none;"';
-        item = item.replace(/^[ \t]*\[(x| )?]/m, function () {
+        item = item.replace(/^[ \t]*\[(x|X| )?]/m, function () {
           var otp = '<input type="checkbox" disabled style="margin: 0px 0.35em 0.25em -1.6em; vertical-align: middle;"';
           if (checked) {
             otp += ' checked';
@@ -1840,13 +2060,14 @@ showdown.subParser('lists', function (text, options, globals) {
       listStr = listStr.replace(/\s+$/, '');
     }
 
-    return showdown.subParser('hashBlock')(listStr, options, globals);
+    return listStr;
   }
 
   /**
    * Check and parse consecutive lists (better fix for issue #142)
    * @param {string} list
    * @param {string} listType
+   * @param {boolean} trimTrailing
    * @returns {string}
    */
   function parseConsecutiveLists(list, listType, trimTrailing) {
@@ -1908,6 +2129,7 @@ showdown.subParser('lists', function (text, options, globals) {
   // attacklab: strip sentinel
   text = text.replace(/~0/, '');
 
+  text = globals.converter._dispatch('lists.after', text, options, globals);
   return text;
 });
 
@@ -1933,6 +2155,7 @@ showdown.subParser('outdent', function (text) {
 showdown.subParser('paragraphs', function (text, options, globals) {
   'use strict';
 
+  text = globals.converter._dispatch('paragraphs.before', text, options, globals);
   // Strip leading and trailing lines:
   text = text.replace(/^\n+/g, '');
   text = text.replace(/\n+$/g, '');
@@ -1943,11 +2166,10 @@ showdown.subParser('paragraphs', function (text, options, globals) {
 
   for (var i = 0; i < end; i++) {
     var str = grafs[i];
-
     // if this is an HTML marker, copy it
-    if (str.search(/~K(\d+)K/g) >= 0) {
+    if (str.search(/~(K|G)(\d+)\1/g) >= 0) {
       grafsOut.push(str);
-    } else if (str.search(/\S/) >= 0) {
+    } else {
       str = showdown.subParser('spanGamut')(str, options, globals);
       str = str.replace(/^([ \t]*)/g, '<p>');
       str += '</p>';
@@ -1958,15 +2180,40 @@ showdown.subParser('paragraphs', function (text, options, globals) {
   /** Unhashify HTML blocks */
   end = grafsOut.length;
   for (i = 0; i < end; i++) {
+    var blockText = '',
+        grafsOutIt = grafsOut[i],
+        codeFlag = false;
     // if this is a marker for an html block...
-    while (grafsOut[i].search(/~K(\d+)K/) >= 0) {
-      var blockText = globals.gHtmlBlocks[RegExp.$1];
-      blockText = blockText.replace(/\$/g, '$$$$'); // Escape any dollar signs
-      grafsOut[i] = grafsOut[i].replace(/~K\d+K/, blockText);
-    }
-  }
+    while (grafsOutIt.search(/~(K|G)(\d+)\1/) >= 0) {
+      var delim = RegExp.$1,
+          num   = RegExp.$2;
 
-  return grafsOut.join('\n\n');
+      if (delim === 'K') {
+        blockText = globals.gHtmlBlocks[num];
+      } else {
+        // we need to check if ghBlock is a false positive
+        if (codeFlag) {
+          // use encoded version of all text
+          blockText = showdown.subParser('encodeCode')(globals.ghCodeBlocks[num].text);
+        } else {
+          blockText = globals.ghCodeBlocks[num].codeblock;
+        }
+      }
+      blockText = blockText.replace(/\$/g, '$$$$'); // Escape any dollar signs
+
+      grafsOutIt = grafsOutIt.replace(/(\n\n)?~(K|G)\d+\2(\n\n)?/, blockText);
+      // Check if grafsOutIt is a pre->code
+      if (/^<pre\b[^>]*>\s*<code\b[^>]*>/.test(grafsOutIt)) {
+        codeFlag = true;
+      }
+    }
+    grafsOut[i] = grafsOutIt;
+  }
+  text = grafsOut.join('\n\n');
+  // Strip leading and trailing lines:
+  text = text.replace(/^\n+/g, '');
+  text = text.replace(/\n+$/g, '');
+  return globals.converter._dispatch('paragraphs.after', text, options, globals);
 });
 
 /**
@@ -1997,6 +2244,7 @@ showdown.subParser('runExtension', function (ext, text, options, globals) {
 showdown.subParser('spanGamut', function (text, options, globals) {
   'use strict';
 
+  text = globals.converter._dispatch('spanGamut.before', text, options, globals);
   text = showdown.subParser('codeSpans')(text, options, globals);
   text = showdown.subParser('escapeSpecialCharsWithinTagAttributes')(text, options, globals);
   text = showdown.subParser('encodeBackslashEscapes')(text, options, globals);
@@ -2017,15 +2265,17 @@ showdown.subParser('spanGamut', function (text, options, globals) {
   // Do hard breaks:
   text = text.replace(/  +\n/g, ' <br />\n');
 
+  text = globals.converter._dispatch('spanGamut.after', text, options, globals);
   return text;
-
 });
 
-showdown.subParser('strikethrough', function (text, options) {
+showdown.subParser('strikethrough', function (text, options, globals) {
   'use strict';
 
   if (options.strikethrough) {
-    text = text.replace(/(?:~T){2}([^~]+)(?:~T){2}/g, '<del>$1</del>');
+    text = globals.converter._dispatch('strikethrough.before', text, options, globals);
+    text = text.replace(/(?:~T){2}([\s\S]+?)(?:~T){2}/g, '<del>$1</del>');
+    text = globals.converter._dispatch('strikethrough.after', text, options, globals);
   }
 
   return text;
@@ -2108,183 +2358,130 @@ showdown.subParser('stripLinkDefinitions', function (text, options, globals) {
 showdown.subParser('tables', function (text, options, globals) {
   'use strict';
 
-  var table = function () {
-
-    var tables = {},
-        filter;
-
-    tables.th = function (header, style) {
-      var id = '';
-      header = header.trim();
-      if (header === '') {
-        return '';
-      }
-      if (options.tableHeaderId) {
-        id = ' id="' + header.replace(/ /g, '_').toLowerCase() + '"';
-      }
-      header = showdown.subParser('spanGamut')(header, options, globals);
-      if (!style || style.trim() === '') {
-        style = '';
-      } else {
-        style = ' style="' + style + '"';
-      }
-      return '<th' + id + style + '>' + header + '</th>';
-    };
-
-    tables.td = function (cell, style) {
-      var subText = showdown.subParser('spanGamut')(cell.trim(), options, globals);
-      if (!style || style.trim() === '') {
-        style = '';
-      } else {
-        style = ' style="' + style + '"';
-      }
-      return '<td' + style + '>' + subText + '</td>';
-    };
-
-    tables.ths = function () {
-      var out = '',
-          i = 0,
-          hs = [].slice.apply(arguments[0]),
-          style = [].slice.apply(arguments[1]);
-
-      for (i; i < hs.length; i += 1) {
-        out += tables.th(hs[i], style[i]) + '\n';
-      }
-
-      return out;
-    };
-
-    tables.tds = function () {
-      var out = '',
-          i = 0,
-          ds = [].slice.apply(arguments[0]),
-          style = [].slice.apply(arguments[1]);
-
-      for (i; i < ds.length; i += 1) {
-        out += tables.td(ds[i], style[i]) + '\n';
-      }
-      return out;
-    };
-
-    tables.thead = function () {
-      var out,
-          hs = [].slice.apply(arguments[0]),
-          style = [].slice.apply(arguments[1]);
-
-      out = '<thead>\n';
-      out += '<tr>\n';
-      out += tables.ths.apply(this, [hs, style]);
-      out += '</tr>\n';
-      out += '</thead>\n';
-      return out;
-    };
-
-    tables.tr = function () {
-      var out,
-        cs = [].slice.apply(arguments[0]),
-        style = [].slice.apply(arguments[1]);
-
-      out = '<tr>\n';
-      out += tables.tds.apply(this, [cs, style]);
-      out += '</tr>\n';
-      return out;
-    };
-
-    filter = function (text) {
-      var i = 0,
-        lines = text.split('\n'),
-        line,
-        hs,
-        out = [];
-
-      for (i; i < lines.length; i += 1) {
-        line = lines[i];
-        // looks like a table heading
-        if (line.trim().match(/^[|].*[|]$/)) {
-          line = line.trim();
-
-          var tbl = [],
-              align = lines[i + 1].trim(),
-              styles = [],
-              j = 0;
-
-          if (align.match(/^[|][-=|: ]+[|]$/)) {
-            styles = align.substring(1, align.length - 1).split('|');
-            for (j = 0; j < styles.length; ++j) {
-              styles[j] = styles[j].trim();
-              if (styles[j].match(/^[:][-=| ]+[:]$/)) {
-                styles[j] = 'text-align:center;';
-
-              } else if (styles[j].match(/^[-=| ]+[:]$/)) {
-                styles[j] = 'text-align:right;';
-
-              } else if (styles[j].match(/^[:][-=| ]+$/)) {
-                styles[j] = 'text-align:left;';
-              } else {
-                styles[j] = '';
-              }
-            }
-          }
-          tbl.push('<table>');
-          hs = line.substring(1, line.length - 1).split('|');
-
-          if (styles.length === 0) {
-            for (j = 0; j < hs.length; ++j) {
-              styles.push('text-align:left');
-            }
-          }
-          tbl.push(tables.thead.apply(this, [hs, styles]));
-          line = lines[++i];
-          if (!line.trim().match(/^[|][-=|: ]+[|]$/)) {
-            // not a table rolling back
-            line = lines[--i];
-          } else {
-            line = lines[++i];
-            tbl.push('<tbody>');
-            while (line.trim().match(/^[|].*[|]$/)) {
-              line = line.trim();
-              tbl.push(tables.tr.apply(this, [line.substring(1, line.length - 1).split('|'), styles]));
-              line = lines[++i];
-            }
-            tbl.push('</tbody>');
-            tbl.push('</table>');
-            // we are done with this table and we move along
-            out.push(showdown.subParser('hashBlock')(tbl.join('\n'), options, globals));
-            continue;
-          }
-        }
-        out.push(line);
-      }
-      return out.join('\n');
-    };
-    return {parse: filter};
-  };
-
-  if (options.tables) {
-    var tableParser = table();
-    return tableParser.parse(text);
-  } else {
+  if (!options.tables) {
     return text;
   }
-});
 
-showdown.subParser('latex', function (text, options, globals) {
-  text = text.replace(/(\\(?:~D~D))|([\r\n])?(~D~D)(?:latex)?([\s\S]+?)~D~D/g, function(all, escaped, lr, tag, content){
-    var ret = content
-    try{
-      if(escaped){
-        ret = all.substr(1);
+  var tableRgx = /^[ \t]{0,3}\|?.+\|.+\n[ \t]{0,3}\|?[ \t]*:?[ \t]*(?:-|=){3,}[ \t]*:?[ \t]*\|[ \t]*:?[ \t]*(?:-|=){3,}[^]+?(?:\n\n|~0)/gm;
+
+  function parseStyles(sLine) {
+    if (/^:[ \t]*---*$/.test(sLine)) {
+      return ' style="text-align:left;"';
+    } else if (/^---*[ \t]*:[ \t]*$/.test(sLine)) {
+      return ' style="text-align:right;"';
+    } else if (/^:[ \t]*---*[ \t]*:$/.test(sLine)) {
+      return ' style="text-align:center;"';
+    } else {
+      return '';
+    }
+  }
+
+  function parseHeaders(header, style) {
+    var id = '';
+    header = header.trim();
+    if (options.tableHeaderId) {
+      id = ' id="' + header.replace(/ /g, '_').toLowerCase() + '"';
+    }
+    header = showdown.subParser('spanGamut')(header, options, globals);
+
+    return '<th' + id + style + '>' + header + '</th>\n';
+  }
+
+  function parseCells(cell, style) {
+    var subText = showdown.subParser('spanGamut')(cell, options, globals);
+    return '<td' + style + '>' + subText + '</td>\n';
+  }
+
+  function buildTable(headers, cells) {
+    var tb = '<table>\n<thead>\n<tr>\n',
+        tblLgn = headers.length;
+
+    for (var i = 0; i < tblLgn; ++i) {
+      tb += headers[i];
+    }
+    tb += '</tr>\n</thead>\n<tbody>\n';
+
+    for (i = 0; i < cells.length; ++i) {
+      tb += '<tr>\n';
+      for (var ii = 0; ii < tblLgn; ++ii) {
+        tb += cells[i][ii];
       }
-      else if(lr){
-        ret = showdown.subParser('hashBlock')('<div class="katex-block">'+katex.renderToString(content)+'</div>', options, globals);
+      tb += '</tr>\n';
+    }
+    tb += '</tbody>\n</table>\n';
+    return tb;
+  }
+
+  text = globals.converter._dispatch('tables.before', text, options, globals);
+
+  text = text.replace(tableRgx, function (rawTable) {
+
+    var i, tableLines = rawTable.split('\n');
+
+    // strip wrong first and last column if wrapped tables are used
+    for (i = 0; i < tableLines.length; ++i) {
+      if (/^[ \t]{0,3}\|/.test(tableLines[i])) {
+        tableLines[i] = tableLines[i].replace(/^[ \t]{0,3}\|/, '');
       }
-      else{
-        ret = showdown.subParser('hashCode')('<span class="katex-inline">'+katex.renderToString(content)+'</span>', options, globals);
+      if (/\|[ \t]*$/.test(tableLines[i])) {
+        tableLines[i] = tableLines[i].replace(/\|[ \t]*$/, '');
       }
     }
-    catch(e){}
-    return ret;
+
+    var rawHeaders = tableLines[0].split('|').map(function (s) { return s.trim();}),
+        rawStyles = tableLines[1].split('|').map(function (s) { return s.trim();}),
+        rawCells = [],
+        headers = [],
+        styles = [],
+        cells = [];
+
+    tableLines.shift();
+    tableLines.shift();
+
+    for (i = 0; i < tableLines.length; ++i) {
+      if (tableLines[i].trim() === '') {
+        continue;
+      }
+      rawCells.push(
+        tableLines[i]
+          .split('|')
+          .map(function (s) {
+            return s.trim();
+          })
+      );
+    }
+
+    if (rawHeaders.length < rawStyles.length) {
+      return rawTable;
+    }
+
+    for (i = 0; i < rawStyles.length; ++i) {
+      styles.push(parseStyles(rawStyles[i]));
+    }
+
+    for (i = 0; i < rawHeaders.length; ++i) {
+      if (showdown.helper.isUndefined(styles[i])) {
+        styles[i] = '';
+      }
+      headers.push(parseHeaders(rawHeaders[i], styles[i]));
+    }
+
+    for (i = 0; i < rawCells.length; ++i) {
+      var row = [];
+      for (var ii = 0; ii < headers.length; ++ii) {
+        if (showdown.helper.isUndefined(rawCells[i][ii])) {
+
+        }
+        row.push(parseCells(rawCells[i][ii], styles[ii]));
+      }
+      cells.push(row);
+    }
+
+    return buildTable(headers, cells);
   });
+
+  text = globals.converter._dispatch('tables.after', text, options, globals);
+
   return text;
 });
 
@@ -2309,7 +2506,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // AMD Loader
 } else if (typeof define === 'function' && define.amd) {
-  define('showdown', function () {
+  define(function () {
     'use strict';
     return showdown;
   });
@@ -2319,4 +2516,5 @@ if (typeof module !== 'undefined' && module.exports) {
   root.showdown = showdown;
 }
 }).call(this);
+
 //# sourceMappingURL=showdown.js.map
