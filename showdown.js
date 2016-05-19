@@ -1270,6 +1270,7 @@ showdown.subParser('blockGamut', function (text, options, globals) {
   text = showdown.subParser('lists')(text, options, globals);
   text = showdown.subParser('codeBlocks')(text, options, globals);
   text = showdown.subParser('tables')(text, options, globals);
+  text = showdown.subParser('latex')(text, options, globals);
 
   // We already ran _HashHTMLBlocks() before, in Markdown(), but that
   // was to escape raw HTML in the original Markdown source. This time,
@@ -1657,6 +1658,12 @@ showdown.subParser('hashBlock', function (text, options, globals) {
   'use strict';
   text = text.replace(/(^\n+|\n+$)/g, '');
   return '\n\n~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K\n\n';
+});
+
+showdown.subParser('hashCode', function (text, options, globals) {
+  'use strict';
+  text = text.replace(/(^\n+|\n+$)/g, '');
+  return '~K' + (globals.gHtmlBlocks.push(text) - 1) + 'K';
 });
 
 showdown.subParser('hashElement', function (text, options, globals) {
@@ -2482,6 +2489,26 @@ showdown.subParser('tables', function (text, options, globals) {
 
   text = globals.converter._dispatch('tables.after', text, options, globals);
 
+  return text;
+});
+
+showdown.subParser('latex', function (text, options, globals) {
+  text = text.replace(/(\\(?:~D~D))|([\r\n])?(~D~D)(?:latex)?([\s\S]+?)~D~D/g, function(all, escaped, lr, tag, content){
+    var ret = content
+    try{
+      if(escaped){
+        ret = all.substr(1);
+      }
+      else if(lr){
+        ret = showdown.subParser('hashBlock')('<div class="katex-block">'+katex.renderToString(content)+'</div>', options, globals);
+      }
+      else{
+        ret = showdown.subParser('hashCode')('<span class="katex-inline">'+katex.renderToString(content)+'</span>', options, globals);
+      }
+    }
+    catch(e){}
+    return ret;
+  });
   return text;
 });
 

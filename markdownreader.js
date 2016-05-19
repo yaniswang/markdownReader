@@ -13,7 +13,7 @@
 
 	link = document.createElement('link');
 	link.rel = 'stylesheet';
-	link.href = chrome.extension.getURL('prettify.css');
+	link.href = chrome.extension.getURL('hljs.min.css');
 	document.head.appendChild(link);
 
 	link = document.createElement('link');
@@ -77,7 +77,9 @@
 			lastText = text;
 			jTextContainer.text(text.replace(/\r\n?|\r?\n/g, '\r\n'));
 			jMarkdownContainer.html(markdownConverter.makeHtml(lastText));
-			prettyPrint();
+	        $('pre code').each(function(i, block) {
+	            hljs.highlightBlock(block);
+	        }); 
 			updateOutline();
 		}
 	}

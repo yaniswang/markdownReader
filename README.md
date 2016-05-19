@@ -27,6 +27,7 @@ Tasklist:
 ---------------
 
 - [x] This task is done
+- [X] This task is done too
 - [ ] This is still pending
 
 Code:
@@ -79,7 +80,7 @@ markdownReader is released under the MIT license:
 
 > The MIT License
 >
-> Copyright (c) 2014-2015 Yanis Wang \< yanis.wang@gmail.com \>
+> Copyright (c) 2014-2016 Yanis Wang \< yanis.wang@gmail.com \>
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -104,5 +105,5 @@ Thanks
 
 * showdown.js: [https://github.com/showdownjs/showdown](https://github.com/showdownjs/showdown)
 * Katex: [https://github.com/Khan/KaTeX](https://github.com/Khan/KaTeX)
-* prettify: [http://code.google.com/p/google-code-prettify/](http://code.google.com/p/google-code-prettify/)
+* highlightjs: [https://highlightjs.org/](https://highlightjs.org/)
 * GitHub: [https://github.com/](https://github.com/)

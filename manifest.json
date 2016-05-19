@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Markdown Reader",
-	"version": "1.0.11",
+	"version": "1.0.12",
 	"description": "Read markdown file in Chrome.",
 	"icons": {
 		"128": "images/icon.png",
@@ -10,15 +10,15 @@
 	},
 	"permissions": ["tabs", "\u003Call_urls\u003E"],
 	"content_scripts": [{
-		"js": ["jquery-1.8.3.min.js", "prettify.js", "katex.min.js", "showdown.js", "markdownreader.js"],
+		"js": ["jquery-1.8.3.min.js", "highlight.min.js", "katex.min.js", "showdown.js", "markdownreader.js"],
 		"matches": ["*://*/*.md", "file://*/*.md", "*://*/*.markdown", "file://*/*.markdown", "*://*/*.mdown", "file://*/*.mdown", "*://*/*.mkdn", "file://*/*.mkdn", "*://*/*.mkd", "file://*/*.mkd", "*://*/*.text", "file://*/*.text", "*://*/*.mdtext", "file://*/*.mdtext", "*://*/*.mdtxt", "file://*/*.mdtxt"],
 		"run_at": "document_end"
 	}],
 	"web_accessible_resources": [
 		"markdownreader.css",
-		"prettify.css",
 		"images/backtop.gif",
 		"katex.min.css",
+		"hljs.min.css",
 		"fonts/KaTeX_AMS-Regular.woff",
 		"fonts/KaTeX_AMS-Regular.woff2",
 		"fonts/KaTeX_Main-Bold.woff",
