@@ -192,17 +192,17 @@ pre{
 }
 code {
 	padding: 1px 3px;
-    font-size: .72rem;
-    line-height: .72rem;
-    color: #c25;
-    background-color: #f7f7f9;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    border-radius: 3px;
+	font-size: .72rem;
+	line-height: .72rem;
+	color: #c25;
+	background-color: #f7f7f9;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
 	font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
 	border: 1px solid #e1e2e8;
 }
 pre code {
-  padding: 0;
-  background-color: transparent;
+	padding: 0;
+	background-color: transparent;
 }
