@@ -190,3 +190,17 @@ table tr:nth-child(even){background:#FAFAFA;}
 pre{
     padding:5px 0;
 }
+
+@media only print{
+    #markdown-outline, #markdown-backTop {
+        display: none !important;
+    }
+    .content {
+        left: 0 !important;
+        width: auto !important;
+        margin-left: auto !important;
+        background-color: white !important;
+        border: 0 !important;
+        box-shadow: 0 !important;
+    }
+}
