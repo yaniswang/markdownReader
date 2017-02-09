@@ -30,7 +30,12 @@ Tasklist:
 - [X] This task is done too
 - [ ] This is still pending
 
-Code:
+Inline Code:
+-----------------
+
+Inline code: `var code = 'test';`
+
+Block Code:
 -----------------
 
     | Left-Aligned  | Center Aligned  | Right Aligned |
@@ -80,7 +85,7 @@ markdownReader is released under the MIT license:
 
 > The MIT License
 >
-> Copyright (c) 2014-2016 Yanis Wang \< yanis.wang@gmail.com \>
+> Copyright (c) 2014-2017 Yanis Wang \< yanis.wang@gmail.com \>
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
