@@ -1,6 +1,8 @@
 markdownReader
 ==============
 
+![logo.png](https://raw.github.com/yaniswang/markdownReader/master/logo.png)
+
 markdownReader is a extention for chrome, used for reading markdown file.
 
 Features:
@@ -17,7 +19,7 @@ Install
 ==============
 
 1. Install plugin: [https://chrome.google.com/webstore/detail/markdown-reader/gpoigdifkoadgajcincpilkjmejcaanc](https://chrome.google.com/webstore/detail/markdown-reader/gpoigdifkoadgajcincpilkjmejcaanc)
-2. Open plugin center: [chrome://extensions/](chrome://extensions/), and enable file url for markdownReader
+2. Open plugin center: [chrome://extensions/](chrome://extensions/), check "Allow access to file URLs"
 3. Drag md file to chrome
 
 Demo
@@ -70,11 +72,19 @@ LaTeX:
 
 Inline LaTeX: $$E=mc^2$$
 
+------- 
+
 Block LaTeX:
 
 $$
 E=mc^2
 $$
+
+$$
+\begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}
+$$
+
+------- 
 
 Escaped LaTeX: \$$E=mc^2$$
 
@@ -85,7 +95,7 @@ markdownReader is released under the MIT license:
 
 > The MIT License
 >
-> Copyright (c) 2014-2017 Yanis Wang \< yanis.wang@gmail.com \>
+> Copyright (c) 2014-2017 Yanis Wang < yanis.wang@gmail.com >
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
