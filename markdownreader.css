@@ -192,7 +192,7 @@ pre{
     padding:5px 0;
 }
 
-code {
+code.inline {
 	padding: 1px 3px;
 	font-size: .72rem;
 	line-height: .72rem;
@@ -203,11 +203,6 @@ code {
 	border-radius: 3px;
 	font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
 	border: 1px solid #e1e2e8;
-}
-
-pre code {
-	padding: 0;
-	background-color: transparent;
 }
 
 @media only print{

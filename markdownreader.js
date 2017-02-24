@@ -77,9 +77,14 @@
 			lastText = text;
 			jTextContainer.text(text.replace(/\r\n?|\r?\n/g, '\r\n'));
 			jMarkdownContainer.html(markdownConverter.makeHtml(lastText));
-	        $('pre code').each(function(i, block) {
-	            hljs.highlightBlock(block);
-	        }); 
+	        $('code').each(function(i, block){
+	        	if(this.parentNode && /^pre$/i.test(this.parentNode.tagName)){
+	        		hljs.highlightBlock(block);
+	        	}
+	        	else{
+	        		$(this).addClass('inline');
+	        	}
+	        })
 			updateOutline();
 		}
 	}
